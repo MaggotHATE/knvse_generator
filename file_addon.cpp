@@ -1,0 +1,655 @@
+#include "GameForms.h"
+#include "GameData.h"
+#include "GameAPI.h"
+#include "GameObjects.h"
+#include "GameRTTI.h"
+#include <fstream>
+#include <utility>
+#include <regex>
+#include "file_addon.h"
+
+using namespace std;
+//string EXCLUDE = "FalloutNV.esm, DeadMoney.esm, HonestHearts.esm, OldWorldBlues.esm, LonesomeRoad.esm, GunRunnersArsenal.esm";
+
+
+const auto GetHasType2 (vector<int>& weapParams, vector<int>& typesData) // -1 is "any" for better flexibility
+{
+	if (
+		(weapParams[0] == typesData[0] || typesData[0] == -1) &&
+		(weapParams[1] == typesData[1] || typesData[1] == -1) &&
+		(weapParams[2] == typesData[2] || typesData[2] == -1) &&
+		(weapParams[3] == typesData[3] || typesData[3] == -1)
+		) {
+
+		return true;
+	}
+	return false;
+}
+
+void Log1(const string& msg)
+{
+	_MESSAGE("%s", msg.c_str());
+}
+
+string GetCurPath()
+{
+	char buffer[MAX_PATH] = { 0 };
+	GetModuleFileName(NULL, buffer, MAX_PATH);
+	string::size_type pos = string(buffer).find_last_of("\\/");
+	return string(buffer).substr(0, pos);
+}
+
+int HexStringToInt(const string& str)
+{
+	char* p;
+	const auto id = strtoul(str.c_str(), &p, 16);
+	if (*p == 0)
+		return id;
+	return -1;
+}
+
+TESObjectWEAP* Actor::GetWeaponForm() const
+{
+	auto* weaponInfo = this->baseProcess->GetWeaponInfo();
+	if (!weaponInfo)
+		return nullptr;
+	return weaponInfo->weapon;
+}
+
+typesBank readTypes(vector<int> params, string typesfilename, string weapsfilename) {
+	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\_Types)";
+	typesBank typesDB;
+	if (filesystem::exists(dir))
+	{
+		for (filesystem::directory_iterator iter(dir.c_str()), end; iter != end; ++iter)
+		{
+			const auto& path = iter->path();
+			const auto& fileName = path.filename();
+			const auto& SfileName = fileName.string();
+			if (_stricmp(path.extension().string().c_str(), ".json") == 0)
+			{
+				Log1("\nReading Types from JSON file " + SfileName);
+				if (!params.empty()) Log1("\nParams given " + to_string(params[0]));
+				Log1("\nFiles: " + typesfilename + " and " + weapsfilename);
+				try
+				{
+					ifstream i(iter->path());
+					nlohmann::json j;
+					i >> j;
+					if (j.is_array())
+					{
+						for (auto& elem : j)
+						{
+							if (!elem.is_object())
+							{
+								Log1("JSON error: expected object with mod, form and folder fields");
+								continue;
+							}
+							auto typeData = elem.contains("typedata") ? &elem["typedata"] : nullptr;
+							const auto& types = elem.contains("weapontypes") ? &elem["weapontypes"] : nullptr;
+							const auto& folderType = elem.contains("folderType") ? elem["folderType"].get<string>() : "";
+							const auto& modExclude = elem.contains("exclude") ? &elem["exclude"] : nullptr;
+							const auto& options = elem.contains("options") ? &elem["options"] : nullptr;
+							const auto& mod = elem.contains("mod") ? elem["mod"].get<string>() : "";
+							//Log1("Defining types");
+							if (typeData && folderType != "" && (typesfilename == "_" || SfileName == typesfilename)) { // defining types
+								if (!typeData->is_array())
+								{
+									continue;
+								}
+								else {
+									vector<int> tempData;
+									//ranges::transform(*typeData, back_inserter(typesDB.typesMap[folderType]), [&](auto& i) {return i; });
+									ranges::transform(*typeData, back_inserter(tempData), [&](auto& i) {return i; });
+									if (params.empty() || GetHasType2(params, tempData) == true) {
+										//typesDB.typesMap[folderType] = tempData;
+										typesDB.typesMap1.push_back(folderType);
+										typesDB.typesMap2.push_back(tempData);
+										typesDB.typesMap3.push_back(SfileName);
+										Log1("Filename = " + SfileName);
+									}
+
+									//vector<int> tempData;
+									//ranges::transform(*typeData, back_inserter(tempData), [&](auto& i) {return i; });
+									//typesDB.typesMap1[tempData] = folderType;
+									//for (auto& iter: typesDB.typesMap) {
+									//	Log1("Defining types " + iter.first);
+									//}
+								}
+							}
+
+							if (types && (weapsfilename == "_" || SfileName == weapsfilename)) { // reading applied types
+
+								if (!types->is_array())
+								{
+									continue;
+								}
+								else {
+									if (mod == "") {
+										ranges::transform(*types, back_inserter(typesDB.weapType["GLOBAL"]), [&](auto& i) {return i.template get<string>(); });
+										Log1("reading applied types for GLOBAL: " + typesDB.weapType["GLOBAL"].back());
+									}
+									else {
+										ranges::transform(*types, back_inserter(typesDB.weapType[mod]), [&](auto& i) {return i.template get<string>(); });
+										Log1("reading applied types for " + mod + ": " + typesDB.weapType[mod].back());
+									}
+								}
+							}
+
+							if (modExclude) {
+								if (!modExclude->is_array())
+								{
+									continue;
+								}
+								else {
+									ranges::transform(*modExclude, back_inserter(typesDB.excluded), [&](auto& i) {return i.template get<string>(); });
+									Log1("reading exclusions: " + typesDB.excluded.back());
+								}
+							}
+
+							if (options) {
+								if (!options->is_array())
+								{
+									continue;
+								}
+								else {
+									ranges::transform(*options, back_inserter(typesDB.options), [&](auto& i) {return i.template get<string>(); });
+									Log1("reading options: " + typesDB.options.back());
+								}
+							}
+
+							//Log1("processTypesMod1 check");
+							//if (!typesDB.typesMap.empty() && !typesDB.weapType.empty()) {
+							//	weaponsBank weaps = processTypesMod1(-1, typesDB.weapType, typesDB.typesMap);
+							//	writeJson(weaps);
+							//}
+						}
+					}
+					else
+						Log1(iter->path().string() + " does not start as a JSON array");
+				}
+				catch (nlohmann::json::exception& e)
+				{
+					Log1("The JSON is incorrectly formatted! It will not be applied.");
+					Log1(FormatString("JSON error: %s\n", e.what()));
+				}
+			}
+		}
+	}
+	else
+	{
+		Log1(dir + " does not exist.");
+	}
+	return typesDB;
+}
+
+bool thatWeapon(TESObjectWEAP* weap, vector<int>& params){
+	if (params.empty() || (weap->eWeaponType == params[0] &&
+							weap->handGrip == params[1] &&
+							weap->reloadAnim == params[2] &&
+							weap->attackAnim == params[3])
+		) {
+		return true;
+	}
+	return false;
+}
+
+/*
+weaponType getWeaponData(TESForm* form, typesBank& definedType) {
+	weaponType getweapon;
+
+	auto weap = static_cast<TESObjectWEAP*>(form);
+	getweapon.ID = weap->refID;
+	getweapon.modIDX = weap->GetModIndex();
+	getweapon.modIDXshort = getweapon.modIDX + (getweapon.modIDX * 0x00FFFFFF);
+	getweapon.fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(getweapon.modIDX));
+	getweapon.hexedID = FormatString(R"(%X)", getweapon.ID - getweapon.modIDXshort);
+
+	string test = weap->GetName();
+	Log1("Type to " + test + "(" + getweapon.hexedID + ")" + " : mod ID " + FormatString(R"(%X)", getweapon.modIDX) + " = " + getweapon.fileModName);
+
+	getweapon.typeParams.push_back(weap->eWeaponType); //Animation type
+	getweapon.typeParams.push_back(weap->handGrip); //Grip type
+	getweapon.typeParams.push_back(weap->reloadAnim); //Reload animation (non-modded)
+	getweapon.typeParams.push_back(weap->attackAnim); //Attack animation
+	Log1("Animation type: " + to_string(getweapon.typeParams[0]));
+	Log1("Grip type: " + to_string(getweapon.typeParams[1]));
+	Log1("Reload animation: " + to_string(getweapon.typeParams[2]));
+	Log1("Attack animation: " + to_string(getweapon.typeParams[3]));
+	vector<string> matchFolders = getweapon.checkFolders2(definedType);
+	if (matchFolders.size() == 1) {
+		getweapon.typeFolder = matchFolders[0];
+	}
+	else if (matchFolders.size() > 1) {
+		srand(time(NULL));
+		getweapon.typeFolder = matchFolders[rand() % matchFolders.size()];
+	}
+	if (getweapon.typeFolder != "") Log1("Replacing animations with " + getweapon.typeFolder + " for " + test + "; refID " + getweapon.hexedID + "; mod ID " + FormatString(R"(%X)", getweapon.modIDXshort));
+	
+	return getweapon;
+}
+*/
+
+weaponType getWeaponData1(TESObjectWEAP* weap) {
+	weaponType getweapon;
+
+	getweapon.ID = weap->refID;
+	getweapon.modIDX = weap->GetModIndex();
+	getweapon.modIDXshort = getweapon.modIDX + (getweapon.modIDX * 0x00FFFFFF);
+	getweapon.fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(getweapon.modIDX));
+	getweapon.hexedID = FormatString(R"(%X)", getweapon.ID - getweapon.modIDXshort);
+
+	getweapon.name = weap->GetName();
+	Log1("Weapon data for " + getweapon.name + "(" + getweapon.hexedID + ")" + " : mod ID " + FormatString(R"(%X)", getweapon.modIDX) + " = " + getweapon.fileModName);
+
+	getweapon.typeParams.push_back(weap->eWeaponType); //Animation type
+	getweapon.typeParams.push_back(weap->handGrip); //Grip type
+	getweapon.typeParams.push_back(weap->reloadAnim); //Reload animation (non-modded)
+	getweapon.typeParams.push_back(weap->attackAnim); //Attack animation
+	Log1("Animation type: " + to_string(getweapon.typeParams[0]));
+	Log1("Grip type: " + to_string(getweapon.typeParams[1]));
+	Log1("Reload animation: " + to_string(getweapon.typeParams[2]));
+	Log1("Attack animation: " + to_string(getweapon.typeParams[3]));
+
+
+	return getweapon;
+}
+
+weaponsBank processTypesMod2(typesBank& definedType, string modID)
+{
+	weaponsBank weapBank;
+
+	NiTPointerMap<TESForm>* formsMap = *(NiTPointerMap<TESForm>**)0x11C54C0;
+	int modIDX = HexStringToInt(modID);
+
+	for (auto mIter = formsMap->Begin(); mIter; ++mIter) { // credits to Yvileapsis for the iteration example
+
+		TESForm* form = mIter.Get();
+		if (form->IsWeapon()) {
+			UInt8 currentIDX = form->GetModIndex();
+			if (currentIDX == modIDX || modID == "FF") {
+				string fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(currentIDX));
+
+				if (find(definedType.excluded.begin(), definedType.excluded.end(), fileModName) == definedType.excluded.end()) {
+					auto weap = static_cast<TESObjectWEAP*>(form);
+					weaponType weaponData = getWeaponData1(weap);
+					vector<string> matchFolders;
+					//if (typesfilename == "") {
+						Log1("Checking all files; ");
+						matchFolders = weaponData.checkFolders2(definedType);
+					//}
+					//else {
+					//	Log1("Checking a file: " + typesfilename);
+					//	matchFolders = weaponData.checkFoldersFile1(definedType, typesfilename);
+					//}
+					if (matchFolders.size() == 1) {
+						weaponData.typeFolder = matchFolders[0];
+					}
+					else if (matchFolders.size() > 1) {
+						srand(time(NULL));
+						weaponData.typeFolder = matchFolders[rand() % matchFolders.size()];
+					}
+					if (weaponData.typeFolder != "") {
+						Log1("Replacing animations with " + weaponData.typeFolder + " for " + weaponData.name + "; refID " + weaponData.hexedID + "; mod ID " + FormatString(R"(%X)", weaponData.modIDXshort));
+						weapBank.formAndFolder[currentIDX][weaponData.hexedID] = weaponData.typeFolder;
+					}
+					else {
+						weapBank.unassigned[weaponData.hexedID] = weaponData.typeParams;
+					}
+				}
+			}
+		}
+	}
+
+	return weapBank;
+}
+
+/*
+weaponsBank processTypesMod1(vector<string>& weapType, map<string, vector<int>>& typesMap, vector<string> excluded, string modID)
+{
+	weaponsBank weapBank;
+
+	NiTPointerMap<TESForm>* formsMap = *(NiTPointerMap<TESForm>**)0x11C54C0;
+	int modIDX = HexStringToInt(modID);
+
+	for (auto mIter = formsMap->Begin(); mIter; ++mIter) { // credits to Yvileapsis for the iteration example
+
+		TESForm* form = mIter.Get();
+		UInt8 currentIDX = form->GetModIndex();
+		UInt32 currentIDXshort = currentIDX + (currentIDX * 0x00FFFFFF);
+		string fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(currentIDX));
+		if (find(excluded.begin(), excluded.end(), fileModName) == excluded.end()) {
+			if (currentIDX == modIDX || modID == "FF") {
+
+				if (form->IsWeapon()) {
+					auto weap = static_cast<TESObjectWEAP*>(form);
+					string hexedID = FormatString(R"(%X)", weap->refID - currentIDXshort);
+					string test = weap->GetName();
+
+					Log1("Type to " + test + " : mod ID " + to_string(currentIDX) + " = " + fileModName);
+
+					vector<int> weapParams;
+					weapParams.push_back(weap->eWeaponType); //Animation type
+					weapParams.push_back(weap->handGrip); //Grip type
+					weapParams.push_back(weap->reloadAnim); //Reload animation (non-modded)
+					weapParams.push_back(weap->attackAnim); //Attack animation
+					Log1("Animation type: " + to_string(weapParams[0]));
+					Log1("Grip type: " + to_string(weapParams[1]));
+					Log1("Reload animation: " + to_string(weapParams[2]));
+					Log1("Attack animation: " + to_string(weapParams[3]));
+					// the log messages above are actually usefull for working with types
+					// there's also a "reference" in tesEdit code
+
+					for (int i = 0; i < weapType.size(); i++) {
+
+						try {
+							if (GetHasType2(weapParams, typesMap.at(weapType[i]))) {
+								Log1("Replacing animations with " + weapType[i] + " for " + test + "; refID " + hexedID + "; mod ID " + FormatString(R"(%X)", currentIDXshort));
+								weapBank.formAndFolder[currentIDX][hexedID] = weapType[i];
+
+							}
+						}
+						catch (const out_of_range& oor) {
+							Log1("This weapontype wasn't defined: " + weapType[i]);
+						}
+					}
+				}
+				else {
+					//Log1("Type: wrong item " + to_string(traverse->key) + "; Current rem: " + to_string(traverse->key % formsMap->m_numBuckets));
+				}
+			}
+		}
+		else {
+			//Log1("This mod is excluded: " + fileModName);
+		}
+
+	}
+
+	return weapBank;
+}
+*/
+
+nlohmann::json pushOrWrite(string prefix, weaponType& weaps, bool write = true, int reversed  = 0) {
+	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)";
+
+	nlohmann::json subMod = nlohmann::json::object();
+	//arrayWeaponsDB[formfolderPair.second] = nlohmann::json::array();
+	//Log1("Registered2 form " + weaps.hexedID + ": " + weaps.fileModName + ": " + weaps.typeFolder);
+
+	///write to json here
+	subMod["mod"] = weaps.fileModName;
+	subMod["form"] = weaps.hexedID;
+	subMod["folder"] = weaps.typeFolder;
+
+	if (write == true) {
+		nlohmann::json rootArr = nlohmann::json::array();
+		rootArr.push_back(subMod);
+		if (reversed == 0) {
+			Log1("Writing into: _" + weaps.fileModName + "_" + weaps.typeFolder + "_" + weaps.name + ".json");
+			ofstream o(dir + prefix + weaps.fileModName + "_" + weaps.typeFolder + "_" + weaps.name + ".json");
+			o << setw(4) << rootArr << endl;
+		}
+		else {
+			Log1("Writing into: _" + weaps.typeFolder + "_" + weaps.fileModName + "_" + weaps.name + ".json");
+			ofstream o(dir + prefix + weaps.typeFolder + "_" + weaps.fileModName + "_" + weaps.name + ".json");
+			o << setw(4) << rootArr << endl;
+		}
+	}
+
+	return subMod;
+}
+
+bool writeUnassigned(weaponsBank& weapBanks) {
+	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\_Types\)";
+
+	nlohmann::json rootArr = nlohmann::json::array();
+	nlohmann::json subMod = nlohmann::json::object();
+	for (auto unass : weapBanks.unassigned) {
+		subMod[unass.first] = { unass.second[0], unass.second[1], unass.second[2], unass.second[3] };
+	}
+	rootArr.push_back(subMod);
+	Log1("Writing into: _unassigned_.json");
+	ofstream o(dir + "_unassigned_.json");
+	o << setw(4) << rootArr << endl;
+}
+
+bool writeJson(weaponsBank& weaponsDB, string prefix, string modIDX, int reversed = 0) {
+
+	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)";
+
+	Log1("writeJson start at: " + dir);
+
+	if (!weaponsDB.formAndFolder.empty())
+	{
+		//regex regexp(".esp|.esm");
+		if (modIDX == "FF") {
+			for (auto formfolder : weaponsDB.formAndFolder)
+			{
+				string fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(formfolder.first));
+				//if (EXCLUDE.find(fileModName) == string::npos) {
+				map<string, nlohmann::json> arrayWeaponsDB;
+				Log1("Writing to: " + fileModName);
+
+				for (auto formfolderPair : formfolder.second)
+				{
+					nlohmann::json subMod = nlohmann::json::object();
+					//arrayWeaponsDB[formfolderPair.second] = nlohmann::json::array();
+					Log1(FormatString("Registered2 form %X, mod ID %d", formfolderPair.first, formfolder.first) + ": " + fileModName + ": " + formfolderPair.second);
+
+					///write to json here
+					subMod["mod"] = fileModName;
+					subMod["form"] = formfolderPair.first;
+					subMod["folder"] = formfolderPair.second;
+					arrayWeaponsDB[formfolderPair.second].push_back(subMod);
+				}
+				for (auto jsonarray : arrayWeaponsDB) {
+					if (reversed == 0) {
+						Log1("Writing into: _" + fileModName + "_" + jsonarray.first + ".json");
+						ofstream o(dir + prefix + fileModName + "_" + jsonarray.first + ".json");
+						o << setw(4) << jsonarray.second << endl;
+					}
+					else {
+						Log1("Writing into: _" + jsonarray.first + "_" + fileModName + ".json");
+						ofstream o(dir + prefix + jsonarray.first + "_" + fileModName + ".json");
+						o << setw(4) << jsonarray.second << endl;
+					}
+				}
+				//}
+			}
+		}
+		else {
+			int modIDXdec = HexStringToInt(modIDX);
+			string fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(modIDXdec));
+			//if (EXCLUDE.find(fileModName) == string::npos) {
+			map<string, nlohmann::json> arrayWeaponsDB;
+			Log1("Writing to: " + fileModName);
+
+			for (auto formfolderPair : weaponsDB.formAndFolder[modIDXdec])
+			{
+				nlohmann::json subMod = nlohmann::json::object();
+				//arrayWeaponsDB[formfolderPair.second] = nlohmann::json::array();
+				Log1(FormatString("Registered2 form %X, mod ID %d", formfolderPair.first, modIDXdec) + ": " + fileModName + ": " + formfolderPair.second);
+
+				///write to json here
+				subMod["mod"] = fileModName;
+				subMod["form"] = formfolderPair.first;
+				subMod["folder"] = formfolderPair.second;
+				arrayWeaponsDB[formfolderPair.second].push_back(subMod);
+			}
+			for (auto jsonarray : arrayWeaponsDB) {
+				//string fileModName1 = regex_replace(fileModName, regexp, "_");
+				if (reversed == 0) {
+					Log1("Writing into: _" + fileModName + "_" + jsonarray.first + ".json");
+					ofstream o(dir + prefix + fileModName + "_" + jsonarray.first + ".json");
+					o << setw(4) << jsonarray.second << endl;
+				}
+				else {
+					Log1("Writing into: _" + jsonarray.first + "_" + fileModName + ".json");
+					ofstream o(dir + prefix + jsonarray.first + "_" + fileModName + ".json");
+					o << setw(4) << jsonarray.second << endl;
+				}
+			}
+			//}
+		}
+	}
+	else
+	{
+		Log1("There are no records here!");
+	}
+	return true;
+}
+
+nlohmann::json writeAweapon(string prefix, TESObjectWEAP* weap, int reversed, string folder) {
+	vector<int> params;
+	typesBank typesDB = readTypes(params);
+	weaponType weaps = getWeaponData1(weap);
+	if (folder != "_") weaps.typeFolder = folder;
+	else {
+		vector<string> matchFolders = weaps.checkFolders3(typesDB);
+		if (matchFolders.size() == 1) {
+			weaps.typeFolder = matchFolders[0];
+		}
+		else if (matchFolders.size() > 1) {
+			srand(time(NULL));
+			weaps.typeFolder = matchFolders[rand() % matchFolders.size()];
+		}
+	}
+	return pushOrWrite(prefix, weaps, true, reversed);
+}
+
+vector<string> matchAWeapon(TESObjectWEAP* weap) {
+
+	vector<int> params;
+	typesBank typesDB = readTypes(params);
+	weaponType weaps = getWeaponData1(weap);
+	return weaps.checkFolders3(typesDB);
+
+}
+
+vector<string> matchAWeapon1(weaponType& weaps, vector<int> param1) {
+
+	vector<int> params;
+	typesBank typesDB = readTypes(params);
+	if (param1.empty()) {
+		return weaps.checkFolders3(typesDB);
+	}
+	else {
+		vector<string> matching;
+
+		Log1(" Checking by defined params ");
+		for (int i = 0; i < typesDB.typesMap1.size(); i++) {
+			if (GetHasType2(typesDB.typesMap2[i], param1)) {
+				matching.push_back(typesDB.typesMap1[i] + " [ " + to_string(typesDB.typesMap2[i][0]) + " " + to_string(typesDB.typesMap2[i][1]) + " " + to_string(typesDB.typesMap2[i][2]) + " " + to_string(typesDB.typesMap2[i][3]) + " ]");
+			}
+		}
+
+		return matching;
+	}
+
+}
+
+bool processTypesAndWrite2(string prefix, string modIDX, int eWeaponType, int handGrip, int reloadAnim, int attackAnim, int reversed, string typesfilename, string weapsfilename) {
+	const auto then = chrono::system_clock::now();
+	
+	vector<int> params;
+	if (!(eWeaponType == 0 && handGrip == 0 && reloadAnim == 0 && attackAnim == 0)) {
+		
+		params = { eWeaponType , handGrip , reloadAnim , attackAnim };
+		Log1(FormatString("Params are %d, %d, %d and %d", params[0], params[1], params[2], params[3]));
+	}
+
+	typesBank typesDB = readTypes(params, typesfilename, weapsfilename);
+	if (reversed == 0 && find(typesDB.options.begin(), typesDB.options.end(), "reversed") != typesDB.options.end()) reversed = 1;
+
+	if (typesDB.weapType.empty()) {
+		return false;
+	}
+	else if (modIDX == "FF") {
+		Log1("Starting GLOBAL");
+		//weaponsBank weaps = processTypesMod1(mods.second, typesDB.typesMap, typesDB.excluded, modIDX);
+		weaponsBank weaps = processTypesMod2(typesDB, modIDX);
+		writeJson(weaps, prefix, modIDX, reversed);
+		writeUnassigned(weaps);
+	}
+	else {
+		Log1("Starting a single mod: " + modIDX);
+		//weaponsBank weaps = processTypesMod1(mods.second, typesDB.typesMap, typesDB.excluded, modIDX);
+		weaponsBank weaps = processTypesMod2(typesDB, modIDX);
+		writeJson(weaps, prefix, modIDX, reversed);
+		writeUnassigned(weaps);
+	}
+	const auto now = chrono::system_clock::now();
+	const auto diff = chrono::duration_cast<chrono::milliseconds>(now - then);
+	Log1(FormatString("Written jsons in %d ms", diff.count()));
+
+	return true;
+}
+
+//////////////////////////////////
+
+//bool writeJson2(weaponsBank weaponsDB, string prefix, string modIDX) {
+//
+//	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)";
+//
+//	Log1("writeJson start at: " + dir);
+//
+//	if (!weaponsDB.formAndFolder.empty())
+//	{
+//			int modIDXdec = HexStringToInt(modIDX);
+//			string fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(modIDXdec));
+//			//if (EXCLUDE.find(fileModName) == string::npos) {
+//			map<string, nlohmann::json> arrayWeaponsDB;
+//			Log1("Writing to: " + fileModName);
+//
+//			for (auto formfolderPair : weaponsDB.formAndFolder[modIDXdec])
+//			{
+//				nlohmann::json subMod = nlohmann::json::object();
+//				//arrayWeaponsDB[formfolderPair.second] = nlohmann::json::array();
+//				Log1(FormatString("Registered2 form %X, mod ID %d", formfolderPair.first, modIDXdec) + ": " + fileModName + ": " + formfolderPair.second);
+//
+//				///write to json here
+//				subMod["mod"] = fileModName;
+//				subMod["form"] = formfolderPair.first;
+//				subMod["folder"] = formfolderPair.second;
+//				arrayWeaponsDB[formfolderPair.second].push_back(subMod);
+//			}
+//			for (auto jsonarray : arrayWeaponsDB) {
+//				regex regexp(".esp+|.esm+");
+//				regex_replace(fileModName, regexp, "_");
+//				Log1("Writing into: _" + fileModName + "_" + jsonarray.first + ".json");
+//				ofstream o(dir + prefix + fileModName + "_" + jsonarray.first + ".json");
+//				o << setw(4) << jsonarray.second << endl;
+//			}
+//	}
+//	else
+//	{
+//		Log1("There are no records here!");
+//	}
+//	return true;
+//}
+
+//bool processTypesAndWrite(string prefix, string modIDX) {
+//	const auto then = chrono::system_clock::now();
+//	vector<int> params;
+//	typesBank typesDB = readTypes(params);
+//	if (typesDB.weapType.empty()) {
+//		return false;
+//	}
+//	else if (modIDX == "FF") {
+//		Log1("Starting GLOBAL");
+//		//weaponsBank weaps = processTypesMod1(mods.second, typesDB.typesMap, typesDB.excluded, modIDX);
+//		weaponsBank weaps = processTypesMod2(typesDB, modIDX);
+//		writeJson(weaps, prefix, modIDX);
+//	}
+//	else {
+//		Log1("Starting a single mod: " + modIDX);
+//		//weaponsBank weaps = processTypesMod1(mods.second, typesDB.typesMap, typesDB.excluded, modIDX);
+//		weaponsBank weaps = processTypesMod2(typesDB, modIDX);
+//		writeJson(weaps, prefix, modIDX);
+//	}
+//	const auto now = chrono::system_clock::now();
+//	const auto diff = chrono::duration_cast<chrono::milliseconds>(now - then);
+//	Log1(FormatString("Written jsons in %d ms", diff.count()));
+//
+//	return true;
+//}
