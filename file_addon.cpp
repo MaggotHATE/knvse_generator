@@ -7,9 +7,68 @@
 #include <utility>
 #include <regex>
 #include "file_addon.h"
+#include "json/json.h"
+
 
 using namespace std;
+using namespace nlohmann;
 //string EXCLUDE = "FalloutNV.esm, DeadMoney.esm, HonestHearts.esm, OldWorldBlues.esm, LonesomeRoad.esm, GunRunnersArsenal.esm";
+
+//
+//Json::Value funcGetJson(char*& filename)
+//{
+//    std::fstream fs;
+//    Json::Value root;
+//    fs.open(filename, std::fstream::in | std::fstream::out | std::fstream::app);
+//    std::locale loc = std::locale("Russian");
+//    fs.imbue(loc);
+//    Json::CharReaderBuilder rbuilder;
+//    rbuilder["collectComments"] = false;
+//    std::string errs;
+//    Json::parseFromStream(rbuilder, fs, &root, &errs);
+//
+//    fs.close();
+//    return root;
+//}
+//
+//void jsonWriteFile(char* filename, bool isUTF8 = true)
+//{
+//	Json::Value root;
+//	std::fstream fs;
+//	fs.open(filename, std::ios::binary | std::fstream::in | std::ofstream::out | std::ofstream::trunc);
+//
+//	//std::locale loc = std::locale("Russian_Russia.1251");
+//	//std::locale loc = std::locale("Russian");
+//	//fs.imbue(loc);
+//	Json::StreamWriterBuilder builder;
+//	if (isUTF8 == true) {
+//		builder["emitUTF8"] = true;
+//	}
+//	else {
+//		builder["emitUTF8"] = false;
+//	}
+//	std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+//	writer->write(root, &fs);
+//}
+//
+//void jsonRewriteFile(Json::Value root, string filename, bool isUTF8 = true)
+//{
+//	std::fstream fs;
+//	fs.open(filename, std::ios::binary | std::fstream::in | std::ofstream::out | std::ofstream::trunc);
+//
+//	//std::locale loc = std::locale("Russian_Russia.1251");
+//	std::locale loc = std::locale("Russian");
+//	fs.imbue(loc);
+//	Json::StreamWriterBuilder builder;
+//	if (isUTF8 == true) {
+//		builder["emitUTF8"] = true;
+//	}
+//	else {
+//		builder["emitUTF8"] = false;
+//	}
+//	std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+//	writer->write(root, &fs);
+//}
 
 
 const auto GetHasType2 (vector<int>& weapParams, vector<int>& typesData) // -1 is "any" for better flexibility
@@ -74,7 +133,7 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 				try
 				{
 					ifstream i(iter->path());
-					nlohmann::json j;
+					json j;
 					i >> j;
 					if (j.is_array())
 					{
@@ -168,7 +227,7 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 					else
 						Log1(iter->path().string() + " does not start as a JSON array");
 				}
-				catch (nlohmann::json::exception& e)
+				catch (json::exception& e)
 				{
 					Log1("The JSON is incorrectly formatted! It will not be applied.");
 					Log1(FormatString("JSON error: %s\n", e.what()));
@@ -369,11 +428,11 @@ weaponsBank processTypesMod1(vector<string>& weapType, map<string, vector<int>>&
 }
 */
 
-nlohmann::json pushOrWrite(string prefix, weaponType& weaps, bool write = true, int reversed  = 0) {
+json pushOrWrite(string prefix, weaponType& weaps, bool write = true, int reversed  = 0) {
 	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)";
 
-	nlohmann::json subMod = nlohmann::json::object();
-	//arrayWeaponsDB[formfolderPair.second] = nlohmann::json::array();
+	json subMod = json::object();
+	//arrayWeaponsDB[formfolderPair.second] = json::array();
 	//Log1("Registered2 form " + weaps.hexedID + ": " + weaps.fileModName + ": " + weaps.typeFolder);
 
 	///write to json here
@@ -382,7 +441,7 @@ nlohmann::json pushOrWrite(string prefix, weaponType& weaps, bool write = true, 
 	subMod["folder"] = weaps.typeFolder;
 
 	if (write == true) {
-		nlohmann::json rootArr = nlohmann::json::array();
+		json rootArr = json::array();
 		rootArr.push_back(subMod);
 		if (reversed == 0) {
 			Log1("Writing into: _" + weaps.fileModName + "_" + weaps.typeFolder + "_" + weaps.name + ".json");
@@ -399,11 +458,162 @@ nlohmann::json pushOrWrite(string prefix, weaponType& weaps, bool write = true, 
 	return subMod;
 }
 
+
+
+bool writeType(folderMap _map) {
+	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\_Types\)";
+
+	
+	//arrayWeaponsDB[formfolderPair.second] = json::array();
+	//Log1("Registered2 form " + weaps.hexedID + ": " + weaps.fileModName + ": " + weaps.typeFolder);
+	json rootArr = json::array();
+
+	///write to json here
+	
+	for (auto params : _map.typeParams) {
+		//json subMod = json::object();
+		//subMod["folderType"] = _map.folderName;
+		//subMod["typedata"] = params;
+		//subMod["typedata"] = "[" + to_string(params[0]) + ", " + to_string(params[1]) + ", " + to_string(params[2]) + ", " + to_string(params[3]) + "]";
+		
+
+		//rootArr.push_back(subMod);
+		json subMod = params;
+		rootArr.push_back({ { "folderType", _map.folderName },{"typedata", subMod } });
+	}
+	ofstream o(dir + "_types_agenerated_" + _map.folderName + ".json");
+	o << setw(4) << rootArr << endl;
+	Log1("Writing type for " + _map.folderName + " in _types_" + _map.folderName + ".json");
+	
+	
+
+	return true;
+}
+
+bool writeType(vector<folderMap> _maps, string filename) {
+	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\_Types\)";
+
+	json rootArr = json::array();
+	
+	///write to json here
+	for (auto _map : _maps) {
+		for (auto params : _map.typeParams) {
+
+			json subMod = params;
+			rootArr.push_back({ { "folderType", _map.folderName },{"typedata", subMod } });
+		}
+		Log1("Writing type for " + _map.folderName + " in _types_" + filename + ".json");
+	}
+
+	ofstream o(dir + "_types_agenerated_" + filename + ".json");
+	o << setw(4) << rootArr << endl;
+
+
+	return true;
+}
+
+bool writeWeapList(string filename, string modID) {
+	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride)";
+
+	json rootArr = json::array();
+	
+	///write to json here
+	json subMod = json::object();
+	if (filesystem::exists(dir))
+	{
+		for (filesystem::directory_iterator iter(dir.c_str()), end; iter != end; ++iter)
+		{
+			const auto& path = iter->path();
+			const auto& fileName = path.filename();
+			const auto& SfileName = fileName.string();
+			Log1("Checking " + SfileName);
+			if ((path.extension().string().empty() || path.extension().string() == "") && SfileName.find(filename) != string::npos)
+			{
+				if (modID != "FF") {
+					int modIDX = HexStringToInt(modID);
+					string ModName = FormatString("%s", DataHandler::Get()->GetNthModName(modIDX));
+					subMod["mod"] = ModName;
+				}
+				subMod["weapontypes"].push_back(SfileName);
+			}
+		}
+	}
+	rootArr.push_back(subMod);
+	ofstream o(dir + R"(\_Types\_weapons_agenerated_)" + filename + ".json");
+	o << setw(4) << rootArr << endl;
+
+
+	return true;
+}
+
+int writeTypesFolders(string namePart) {
+	aniMap themap;
+	vector<folderMap> _maps;
+	int numTypes = 0;
+
+	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride)";
+	if (filesystem::exists(dir))
+	{
+		for (filesystem::directory_iterator iter(dir.c_str()), end; iter != end; ++iter)
+		{
+			const auto& path = iter->path();
+			const auto& fileName = path.filename();
+			const auto& SfileName = fileName.string();
+			Log1("Checking "+ SfileName);
+			if (path.extension().string().empty() || path.extension().string() == "")
+			{
+				Log1("Extention " + path.extension().string() + " in " + SfileName + ", searching " + namePart);
+				int pos = SfileName.find(namePart);
+
+				string sfilename;
+				transform(SfileName.begin(), SfileName.end(), std::back_inserter(sfilename), ::tolower);
+				int pos_empty = sfilename.find("empty");
+				int pos_lastshot = sfilename.find("lastshot");
+
+				if (pos != string::npos && pos != -1 && pos_empty == string::npos && pos_lastshot == string::npos) {
+					folderMap scanResult;
+					scanResult.getParams(themap, SfileName);
+					_maps.push_back(scanResult);
+					numTypes += scanResult.typeParams.size();
+				}
+			}
+			Log1("Total " + to_string(numTypes)+" types;");
+		}
+	}
+	writeType(_maps, namePart);
+	return numTypes;
+}
+
+map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData) {
+	aniMap themap;
+	map<string, map<string, vector<int>>> _maps;
+	int numTypes = 0;
+
+	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride)";
+	if (filesystem::exists(dir))
+	{
+		for (filesystem::directory_iterator iter(dir.c_str()), end; iter != end; ++iter)
+		{
+			const auto& path = iter->path();
+			const auto& fileName = path.filename();
+			const auto& SfileName = fileName.string();
+			Log1("Checking " + SfileName);
+			if (path.extension().string().empty() || path.extension().string() == "")
+			{
+					folderMap scanResult;
+					scanResult.getParams(themap, SfileName);
+					_maps[SfileName] = scanResult.getWeaponScan(weaponData);
+			}
+		}
+	}
+	return _maps;
+}
+
 bool writeUnassigned(weaponsBank& weapBanks) {
 	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\_Types\)";
 
-	nlohmann::json rootArr = nlohmann::json::array();
-	nlohmann::json subMod = nlohmann::json::object();
+	json rootArr = json::array();
+	json subMod = json::object();
 	for (auto unass : weapBanks.unassigned) {
 		subMod[unass.first] = { unass.second[0], unass.second[1], unass.second[2], unass.second[3] };
 	}
@@ -427,13 +637,13 @@ bool writeJson(weaponsBank& weaponsDB, string prefix, string modIDX, int reverse
 			{
 				string fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(formfolder.first));
 				//if (EXCLUDE.find(fileModName) == string::npos) {
-				map<string, nlohmann::json> arrayWeaponsDB;
+				map<string, json> arrayWeaponsDB;
 				Log1("Writing to: " + fileModName);
 
 				for (auto formfolderPair : formfolder.second)
 				{
-					nlohmann::json subMod = nlohmann::json::object();
-					//arrayWeaponsDB[formfolderPair.second] = nlohmann::json::array();
+					json subMod = json::object();
+					//arrayWeaponsDB[formfolderPair.second] = json::array();
 					Log1(FormatString("Registered2 form %X, mod ID %d", formfolderPair.first, formfolder.first) + ": " + fileModName + ": " + formfolderPair.second);
 
 					///write to json here
@@ -461,13 +671,13 @@ bool writeJson(weaponsBank& weaponsDB, string prefix, string modIDX, int reverse
 			int modIDXdec = HexStringToInt(modIDX);
 			string fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(modIDXdec));
 			//if (EXCLUDE.find(fileModName) == string::npos) {
-			map<string, nlohmann::json> arrayWeaponsDB;
+			map<string, json> arrayWeaponsDB;
 			Log1("Writing to: " + fileModName);
 
 			for (auto formfolderPair : weaponsDB.formAndFolder[modIDXdec])
 			{
-				nlohmann::json subMod = nlohmann::json::object();
-				//arrayWeaponsDB[formfolderPair.second] = nlohmann::json::array();
+				json subMod = json::object();
+				//arrayWeaponsDB[formfolderPair.second] = json::array();
 				Log1(FormatString("Registered2 form %X, mod ID %d", formfolderPair.first, modIDXdec) + ": " + fileModName + ": " + formfolderPair.second);
 
 				///write to json here
@@ -499,7 +709,7 @@ bool writeJson(weaponsBank& weaponsDB, string prefix, string modIDX, int reverse
 	return true;
 }
 
-nlohmann::json writeAweapon(string prefix, TESObjectWEAP* weap, int reversed, string folder) {
+json writeAweapon(string prefix, TESObjectWEAP* weap, int reversed, string folder) {
 	vector<int> params;
 	typesBank typesDB = readTypes(params);
 	weaponType weaps = getWeaponData1(weap);
@@ -598,13 +808,13 @@ bool processTypesAndWrite2(string prefix, string modIDX, int eWeaponType, int ha
 //			int modIDXdec = HexStringToInt(modIDX);
 //			string fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(modIDXdec));
 //			//if (EXCLUDE.find(fileModName) == string::npos) {
-//			map<string, nlohmann::json> arrayWeaponsDB;
+//			map<string, json> arrayWeaponsDB;
 //			Log1("Writing to: " + fileModName);
 //
 //			for (auto formfolderPair : weaponsDB.formAndFolder[modIDXdec])
 //			{
-//				nlohmann::json subMod = nlohmann::json::object();
-//				//arrayWeaponsDB[formfolderPair.second] = nlohmann::json::array();
+//				json subMod = json::object();
+//				//arrayWeaponsDB[formfolderPair.second] = json::array();
 //				Log1(FormatString("Registered2 form %X, mod ID %d", formfolderPair.first, modIDXdec) + ": " + fileModName + ": " + formfolderPair.second);
 //
 //				///write to json here

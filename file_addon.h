@@ -2,12 +2,166 @@
 #include <filesystem>
 #include "GameForms.h"
 #include "json.h"
+
 #include <stdexcept>
 
 using namespace std;
 
 void Log1(const string& msg);
 string GetCurPath();
+
+
+
+struct aniMap {
+	vector<string> Type = {
+	"h2h", //0
+	"1hm", //1
+	"2hm", //2
+	"1hp", //3
+	"1hp", //4
+	"2hr", //5
+	"2ha", //6
+	"2hr", //7
+	"2hh"  //8
+	};
+
+	vector<string> Reload = {
+	"reloada", //0
+	"reloadb", //1
+	"reloadc", //2
+	"reloadd", //3
+	"reloade", //4
+	"reloadf", //5
+	"reloadg", //6
+	"reloadh", //7
+	"reloadi", //8
+	"reloadj", //9
+	"reloadk", //10
+	"reloadl", //11
+	"reloadm", //12
+	"reloadn", //13
+	"reloado", //14
+	"reloadp", //15
+	"reloadq", //16
+	"reloadr", //17
+	"reloads", //18
+	"reloadw", //19
+	"reloadx", //20
+	"reloady", //21
+	"reloadz"  //22
+	};
+
+	map<string, int> Attk1 = {
+		{"attackleft", 26},
+		{"attackright", 32},
+		{"attack3" , 38},
+		{"attack4" , 44},
+		{"attack5" , 50},
+		{"attack6" , 56},
+		{"attack7" , 62},
+		{"attack8" , 68},
+		{"attack9" , 144},
+		{"attackloop" , 74},
+		{"attackspin" , 80},
+		{"attackspin2" , 86},
+		{"attackthrow" , 114},
+		{"attackthrow2" , 120},
+		{"attackthrow3" , 126},
+		{"attackthrow4" , 132},
+		{"attackthrow5" , 138},
+		{"attackthrow6" , 150},
+		{"attackthrow7" , 156},
+		{"attackthrow8" , 162},
+		{"placemine" , 102},
+		{"placemine2" , 108}
+	};
+
+	map<string, map<string, int>> scanForMatch(string foldername) {
+		map<string, map<string, int>> result;
+		string fullpath = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)" + foldername + R"(\_1stPerson\)";
+		if (filesystem::exists(fullpath))
+		{
+			Log1(" SCANNING " + fullpath);
+			for (filesystem::directory_iterator iter(fullpath.c_str()), end; iter != end; ++iter)
+			{
+				const auto& path = iter->path();
+				const auto& fileName = path.filename();
+				const string SfileName0 = fileName.string();
+				string SfileName;
+				
+				//vector<int> params;
+				Log1(" Checking file " + SfileName0);
+				if (_stricmp(path.extension().string().c_str(), ".kf") == 0) {
+					transform(SfileName0.begin(), SfileName0.end(), std::back_inserter(SfileName), ::tolower);
+					Log1(" Valid file !");
+					int aType = -1;
+					for (int i = 0; i < Type.size(); i++) {
+						int pos = SfileName.find(Type[i]);
+						//Log1(" Found " + Type[i] + " in " + to_string(pos));
+						if (pos != string::npos && pos != -1) {
+							Log1(" Has " + Type[i] + " at " + to_string(i) + ", proceeding...");
+							aType = i;
+							int aReload = -1;
+							for (int j = 0; j < Reload.size(); j++) {
+								int pos1 = SfileName.find(Reload[j]);
+								
+								if (pos1 != string::npos) {
+									aReload = j;
+									Log1(" Found Reload " + Reload[j] + " in " + to_string(j));
+									result[Type[i]]["Grip"] = -1;
+									result[Type[i]][Reload[j]] = aReload;
+									Log1("Found reload anim " + SfileName + " for " + to_string(aType) + " -1 " + to_string(aReload) + " -1 ");
+								}
+							}
+							if (aReload == -1) {
+								int aAttk = -1;
+								auto last = SfileName.length() - 6;
+								string subname = SfileName.substr(3, last);
+								Log1(" Searching for " + subname + " between 3 and " + to_string(last));
+
+								try 
+								{
+									//Log1(" Found " + to_string(k));
+									if (Attk1.at(subname)) {
+										
+										aAttk = Attk1.at(subname);
+										Log1(" Found Attk " + subname + " in " + to_string(aAttk) + " at " + to_string(pos));
+										result[Type[i]][subname]= aAttk;
+										Log1("Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk));
+									}
+								}
+								catch (const out_of_range& oor) {
+									//Log1("This weapontype wasn't defined: " + weapType[i]);
+									//result[Type[i]]["noattacks"]= -2;
+								}
+							}
+							
+						}
+					}
+					if (aType == -1) Log1(" Useless file !");
+				}
+				
+			}
+		}
+		return result;
+	}
+
+
+};
+
+struct subMap {
+	string type;
+	int typeData;
+	vector<int> reloads;
+	vector<int> attacks;
+	vector<int> grips;
+
+	string Sreloads;
+	string Sattacks;
+	string Sgrips;
+};
+
+
 
 struct weaponsBank {
 	map<int, map<string, string>> formAndFolder;
@@ -189,6 +343,75 @@ struct weaponType {
 	}
 };
 
+struct folderMap {
+	string folderName;
+	map<string, map<string, int>> parsed;
+	vector<vector<int>> typeParams;
+	vector<subMap> subMaps;
+
+	bool getParams(aniMap ani, string folder) {
+		folderName = folder;
+		parsed = ani.scanForMatch(folder);
+		for (auto data : parsed) {
+			int type = distance(ani.Type.begin(), find(ani.Type.begin(), ani.Type.end(), data.first));
+			subMap currenSM;
+			currenSM.type = data.first;
+			currenSM.typeData = type;
+
+			for (auto param : data.second) {
+
+				//parameters.push_back(param.second);
+				if (param.first.find("reload") != param.first.npos) {
+					currenSM.reloads.push_back(param.second);
+					currenSM.Sreloads += " " + to_string(param.second);
+				}
+				else if (param.first.find("attack") != param.first.npos || param.first.find("place") != param.first.npos) {
+					currenSM.attacks.push_back(param.second);
+					currenSM.Sattacks += " " + to_string(param.second);
+				}
+				else currenSM.grips.push_back(param.second);
+			}
+			for (auto i : currenSM.reloads) {
+				for (auto j : currenSM.attacks) {
+					typeParams.push_back({ type, -1, i, j });
+				}
+			}
+			subMaps.push_back(currenSM);
+		}
+	}
+
+	map<string, vector<int>> getWeaponScan(vector<int> weaponData) {
+		map<string, vector<int>> matchMap;
+		for (auto param : typeParams) {
+			//Log1(" TARGET param: [ " + to_string(weaponData[0]) + " " + to_string(weaponData[1]) + " " + to_string(weaponData[2]) + " " + to_string(weaponData[3]) + "] ");
+			if (param[0] == weaponData[0] && param[2] == weaponData[2] && param[3] == weaponData[3]) {
+				matchMap["matched"] = param;
+				//Log1(" Matched param: [ " + to_string(param[0]) + " " + to_string(param[1]) + " " + to_string(param[2]) + " " + to_string(param[3]) + "] ");
+			}
+			else if (param[0] == weaponData[0] && param[2] == weaponData[2]) {
+				matchMap["reload"].push_back(param[3]);
+				//Log1(" Reload matched, attack: [ " + to_string(param[3]) + "] ");
+			}
+			else if (param[0] == weaponData[0] && param[3] == weaponData[3]) {
+				matchMap["attack"].push_back(param[2]);
+				//Log1(" Attack matched, reload: [ " + to_string(param[2])  + "] ");
+			}
+		}
+		string attacks;
+		string reloads;
+		for (auto reload : matchMap["attack"]) {
+			attacks += " " + to_string(reload);
+		}
+		for (auto reload : matchMap["reload"]) {
+			reloads += " " + to_string(reload);
+		}
+		Log1(("Total half-matched reloads: [" + reloads + "] ").c_str());
+		Log1(("Total half-matched attacks: [" + attacks + "] ").c_str());
+
+		return matchMap;
+	}
+};
+
 //weaponsBank processTypesMod1(vector<string>& weapType, map<string, vector<int>>& typesMap, vector<string> excluded, string modID = "FF");
 //bool processTypesAndWrite(string prefix, string modIDX = "FF");
 bool processTypesAndWrite2(string prefix, string modIDX = "FF", int eWeaponType = 0,  int handGrip = 0, int reloadAnim = 0, int attackAnim = 0, int reversed = 0, string typesfilename = "_", string weapsfilename = "_");
@@ -199,6 +422,11 @@ weaponType getWeaponData1(TESObjectWEAP* weap);
 vector<string> matchAWeapon(TESObjectWEAP* weap);
 vector<string> matchAWeapon1(weaponType& weaps, vector<int> params = {});
 nlohmann::json writeAweapon(string prefix, TESObjectWEAP* weap, int reversed = 0, string folder = "_");
+bool writeType(folderMap _map);
+bool writeType(vector<folderMap> _maps, string filename);
+int writeTypesFolders(string namePart);
+map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData);
+bool writeWeapList(string filename, string modID = "FF");
 
 //template <class num, class str>
 //bool processTypesAndWrite3(string prefix, str modIDX, num eWeaponType, num handGrip, num reloadAnim, num attackAnim, num reversed, str filename) {
