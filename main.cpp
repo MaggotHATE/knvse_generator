@@ -12,7 +12,7 @@
 #define RegisterScriptCommand(name) 	nvse->RegisterCommand(&kCommandInfo_ ##name);
 #endif
 
-IDebugLog		gLog("testReplace.log");
+IDebugLog		gLog("knvse_jsongenerator.log");
 
 PluginHandle	g_pluginHandle = kPluginHandle_Invalid;
 
@@ -45,10 +45,31 @@ static ParamInfo kParams_FourOptionalInts[4] =
 	{	"int", kParamType_Integer, 1 },
 };
 
+static ParamInfo kParams_FiveOptionalInts[5] =
+{
+	{	"int", kParamType_Integer, 1 },
+	{	"int", kParamType_Integer, 1 },
+	{	"int", kParamType_Integer, 1 },
+	{	"int", kParamType_Integer, 1 },
+	{	"int", kParamType_Integer, 1 },
+};
+
+static ParamInfo kParams_OneString_OneOptionalString[2] =
+{
+	{	"string",			kParamType_String,	0	},
+	{	"string",			kParamType_String,	1	}
+};
+
 static ParamInfo kParams_OneString_OneOptionalStringOneOptionalInt[3] =
 {
 	{	"string",			kParamType_String,	0	},
 	{	"string",			kParamType_String,	1	},
+	{	"int", kParamType_Integer, 1 },
+};
+
+static ParamInfo kParams_OneString_OneOptionalInt[2] =
+{
+	{	"string",			kParamType_String,	0	},
 	{	"int", kParamType_Integer, 1 },
 };
 
@@ -111,7 +132,7 @@ bool Cmd_knvse_generate_Execute(COMMAND_ARGS)
 DEFINE_COMMAND_PLUGIN(knvse_generate, "Generates .json files for all the weapons that fit into types - with parameters.", 0, 9, kParams_OneString_ThreeOptionalStringsFiveOptionalInts)
 /// prefix, mod ID (hex), first folder (usually types), second folder (usually weapons), 4 weapon parameters, reversed or not (priority over options in .json) 
 
-bool Cmd_knvse_getfoldersExecute(COMMAND_ARGS);
+bool Cmd_knvse_getfolders_Execute(COMMAND_ARGS);
 
 #if RUNTIME
 //In here we define a script function
@@ -139,6 +160,7 @@ bool Cmd_knvse_getfolders_Execute(COMMAND_ARGS)
 			}
 		}
 		else {
+			Console_Print(FormatString("Input instead: %d %d %d %d", eWeaponType, handGrip, reloadAnim, attackAnim).c_str());
 			vector<string> folders = matchAWeapon1(weaparams, { eWeaponType, handGrip, reloadAnim, attackAnim });
 			for (auto folder : folders) {
 				Console_Print(folder.c_str());
@@ -185,6 +207,160 @@ bool Cmd_knvse_generateone_Execute(COMMAND_ARGS)
 
 DEFINE_COMMAND_PLUGIN(knvse_generateone, "Writes a json for the equipped weapon", 0, 4, kParams_OneString_OneOptionalStringOneOptionalInt)
 // Prefix, folder, reversed or not
+
+bool Cmd_knvse_scan_Execute(COMMAND_ARGS);
+
+#if RUNTIME
+//In here we define a script function
+//Script functions must always follow the Cmd_FunctionName_Execute naming convention
+bool Cmd_knvse_scan_Execute(COMMAND_ARGS)
+{
+	_MESSAGE("Reading weapon data...");
+	char folder[0x1000];
+	aniMap themap;
+	folderMap scanResult;
+
+	if (ExtractArgs(EXTRACT_ARGS, &folder)) {
+		scanResult.getParams(themap, folder);
+		for (auto data : scanResult.subMaps) {
+			Console_Print(("Reloads for " + data.type + ": " + data.Sreloads).c_str());
+			Console_Print(("Attacks for " + data.type + ": " + data.Sattacks).c_str());
+			
+		}
+		Console_Print((to_string(scanResult.typeParams.size()) + " combination(s) total ").c_str());
+	}
+
+	return true;
+}
+#endif
+
+DEFINE_COMMAND_PLUGIN(knvse_scan, "Scans folders for data", 0, 1, kParams_OneString)
+
+bool Cmd_knvse_deepscan_Execute(COMMAND_ARGS);
+
+#if RUNTIME
+//In here we define a script function
+//Script functions must always follow the Cmd_FunctionName_Execute naming convention
+bool Cmd_knvse_deepscan_Execute(COMMAND_ARGS)
+{
+	_MESSAGE("Reading weapon data...");
+	PlayerCharacter* npc = g_thePlayer->GetSingleton();
+
+	Actor* actor = static_cast<Actor*>(npc);
+	auto* weap = actor->GetWeaponForm();
+	int eWeaponType = 00;
+	int handGrip = 000;
+	int reloadAnim = 00;
+	int attackAnim = 00;
+	int moreIfnfo = 0;
+
+	weaponType weaparams = getWeaponData1(weap);
+	
+
+	if (ExtractArgs(EXTRACT_ARGS, &moreIfnfo, &eWeaponType, &handGrip, &reloadAnim, &attackAnim)) {
+		map<string, map<string, vector<int>>> dataMap;
+
+		if (eWeaponType == 00 && handGrip == 000 && reloadAnim == 00 && attackAnim == 00) {
+			Console_Print(FormatString("Parameters: %d %d %d %d", weaparams.typeParams[0], weaparams.typeParams[1], weaparams.typeParams[2], weaparams.typeParams[3]).c_str());
+			dataMap = DEEPscan(weaparams.typeParams);
+		} else {
+			dataMap = DEEPscan({ eWeaponType, handGrip, reloadAnim, attackAnim });
+			Console_Print(FormatString("Parameters: %d %d %d %d", eWeaponType, handGrip, reloadAnim, attackAnim).c_str());
+		}
+
+		for (auto folder : dataMap) {
+			if (moreIfnfo == 0 || moreIfnfo > 2) {
+				if (folder.second["matched"][0] != 0 && folder.second["matched"][1] != 0 && folder.second["matched"][3] != 0 && folder.second["matched"][4] != 0) {
+					Log1((folder.first + ": full match [" + to_string(folder.second["matched"][0]) + " " + to_string(folder.second["matched"][1]) + " " + to_string(folder.second["matched"][2]) + " " + to_string(folder.second["matched"][3]) + "] ").c_str());
+					Console_Print((folder.first + ": full match [" + to_string(folder.second["matched"][0]) + " " + to_string(folder.second["matched"][1]) + " " + to_string(folder.second["matched"][2]) + " " + to_string(folder.second["matched"][3]) + "] ").c_str());
+				}
+			}
+			if (moreIfnfo == 1 || moreIfnfo > 2) {
+				if (folder.second["reload"].size() > 0) {
+					string reloads;
+					for (auto reload : folder.second["reload"]) {
+						reloads += " " + to_string(reload);
+					}
+					Log1((folder.first + ": only reload, attacks: [" + reloads + "] ").c_str());
+					Console_Print((folder.first + ": only reload, attacks: [" + reloads + "] ").c_str());
+				}
+			}
+			if (moreIfnfo >= 2) {
+				if (folder.second["attack"].size() > 0)
+				{
+					string attacks;
+					for (auto reload : folder.second["attack"]) {
+						attacks += " " + to_string(reload);
+					}
+					Console_Print((folder.first + ": only attack, reloads: [" + attacks + "] ").c_str());
+					Log1((folder.first + ": only attack, reloads: [" + attacks + "] ").c_str());
+				}
+			}
+		}
+	}
+	else Console_Print("0 is full match only, 1 is attacks, 2 is reloads, more is all. The rest is four parameters");
+
+	return true;
+}
+#endif
+
+DEFINE_COMMAND_PLUGIN(knvse_deepscan, "Scans all the folders for animations and looks for mathing parameters", 0, 5, kParams_FiveOptionalInts)
+
+bool Cmd_knvse_generatetypes_Execute(COMMAND_ARGS);
+
+#if RUNTIME
+//In here we define a script function
+//Script functions must always follow the Cmd_FunctionName_Execute naming convention
+bool Cmd_knvse_generatetypes_Execute(COMMAND_ARGS)
+{
+	_MESSAGE("Reading weapon data...");
+	char folder[0x1000];
+	int many = 0;
+	aniMap themap;
+	folderMap scanResult;
+
+	if (ExtractArgs(EXTRACT_ARGS, &folder, &many)) {
+		if (many == 0) {
+			scanResult.getParams(themap, folder);
+			writeType(scanResult);
+			Console_Print(("Generated " + to_string(scanResult.typeParams.size()) + " types ").c_str());
+		}
+		else {
+			int numTypes = writeTypesFolders(folder);
+			Console_Print(("Generated many, " + to_string(numTypes) + " types ").c_str());
+		}
+	}
+
+	return true;
+}
+#endif
+
+DEFINE_COMMAND_PLUGIN(knvse_generatetypes, "Generates types file for a folder", 0, 2, kParams_OneString_OneOptionalInt)
+
+bool Cmd_knvse_generatelist_Execute(COMMAND_ARGS);
+
+#if RUNTIME
+//In here we define a script function
+//Script functions must always follow the Cmd_FunctionName_Execute naming convention
+bool Cmd_knvse_generatelist_Execute(COMMAND_ARGS)
+{
+	_MESSAGE("Reading weapon data...");
+	char folder[0x1000];
+	string modID = "FF";
+
+	if (ExtractArgs(EXTRACT_ARGS, &folder, &modID)) {
+
+		writeWeapList(folder, modID);
+
+		Console_Print(FormatString("Writing weapons list of all with %s for a modID %s ",folder, modID).c_str());
+	}
+
+	return true;
+}
+#endif
+
+DEFINE_COMMAND_PLUGIN(knvse_generatelist, "Generates types file for a folder", 0, 2, kParams_OneString_OneOptionalString)
+
 
 bool NVSEPlugin_Query(const NVSEInterface* nvse, PluginInfo* info)
 {
@@ -270,7 +446,10 @@ bool NVSEPlugin_Load(const NVSEInterface* nvse)
 	RegisterScriptCommand(knvse_generate);
 	RegisterScriptCommand(knvse_getfolders);
 	RegisterScriptCommand(knvse_generateone);
-	//RegisterScriptCommand(ExamplePlugin_IsNPCFemale);
+	RegisterScriptCommand(knvse_scan);
+	RegisterScriptCommand(knvse_deepscan);
+	RegisterScriptCommand(knvse_generatetypes);
+	RegisterScriptCommand(knvse_generatelist);
 
 	
 
