@@ -3,7 +3,7 @@
 #include "nvse/GameAPI.h"
 #include "nvse/ParamInfos.h"
 #include "nvse/GameObjects.h"
-#include "nvse_plugin_example/file_addon.h"
+#include "file_addon.h"
 #include <string>
 
 //NoGore is unsupported in this fork

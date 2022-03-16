@@ -7,11 +7,12 @@
 #include <utility>
 #include <regex>
 #include "file_addon.h"
-#include "json/json.h"
+#include "json.h"
 
 
 using namespace std;
 using namespace nlohmann;
+vector<string> EXCLUDED_NAMES = { "empty" , "lastshot" };
 //string EXCLUDE = "FalloutNV.esm, DeadMoney.esm, HonestHearts.esm, OldWorldBlues.esm, LonesomeRoad.esm, GunRunnersArsenal.esm";
 
 //
@@ -70,6 +71,15 @@ using namespace nlohmann;
 //	writer->write(root, &fs);
 //}
 
+bool checkName(string name, vector<string> excludes) {
+	string lowName;
+	transform(name.begin(), name.end(), std::back_inserter(lowName), ::tolower);
+	for (auto exclude : excludes) {
+		if (lowName.find(exclude) != lowName.npos) return false;
+	}
+
+	return true;
+}
 
 const auto GetHasType2 (vector<int>& weapParams, vector<int>& typesData) // -1 is "any" for better flexibility
 {
@@ -514,32 +524,67 @@ bool writeType(vector<folderMap> _maps, string filename) {
 
 bool writeWeapList(string filename, string modID) {
 	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride)";
+	
 
 	json rootArr = json::array();
+
+	const auto dirExclude = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\_Types\_exclude.json)";
+	if (filesystem::exists(dirExclude))
+	{
+		vector<string> EXCLUDED = {};
+		ifstream i(dirExclude.c_str());
+		json j;
+		i >> j;
+		for (auto& elem : j)
+		{
+			if (!elem.is_object())
+			{
+				Log1("JSON error: expected object with mod, form and folder fields");
+				continue;
+			}
+			const auto& nameExclude = elem.contains("exclude_names") ? &elem["exclude_names"] : nullptr;
+			if (nameExclude) {
+				if (!nameExclude->is_array())
+				{
+					continue;
+				}
+				else {
+					ranges::transform(*nameExclude, back_inserter(EXCLUDED), [&](auto& i) {return i.template get<string>(); });
+					Log1("Reading name exclusions: " + EXCLUDED.back());
+				}
+			}
+
+			EXCLUDED_NAMES = EXCLUDED;
+		}
+	}
 	
 	///write to json here
 	json subMod = json::object();
+	string fileFullPath = dir + R"(\_Types\_weapons_agenerated_)" + filename + ".json";
 	if (filesystem::exists(dir))
 	{
+		if (modID != "FF") {
+			int modIDX = HexStringToInt(modID);
+			string ModName = FormatString("%s", DataHandler::Get()->GetNthModName(modIDX));
+			subMod["mod"] = ModName;
+			fileFullPath = dir + R"(\_Types\_weapons_agenerated_)" + filename + "_" + ModName +".json";
+		}
+
 		for (filesystem::directory_iterator iter(dir.c_str()), end; iter != end; ++iter)
 		{
 			const auto& path = iter->path();
 			const auto& fileName = path.filename();
 			const auto& SfileName = fileName.string();
 			Log1("Checking " + SfileName);
-			if ((path.extension().string().empty() || path.extension().string() == "") && SfileName.find(filename) != string::npos)
+
+			if ((path.extension().string().empty() || path.extension().string() == "") && SfileName.find(filename) != string::npos && checkName(SfileName, EXCLUDED_NAMES))
 			{
-				if (modID != "FF") {
-					int modIDX = HexStringToInt(modID);
-					string ModName = FormatString("%s", DataHandler::Get()->GetNthModName(modIDX));
-					subMod["mod"] = ModName;
-				}
 				subMod["weapontypes"].push_back(SfileName);
 			}
 		}
 	}
 	rootArr.push_back(subMod);
-	ofstream o(dir + R"(\_Types\_weapons_agenerated_)" + filename + ".json");
+	ofstream o(fileFullPath);
 	o << setw(4) << rootArr << endl;
 
 
@@ -565,12 +610,12 @@ int writeTypesFolders(string namePart) {
 				Log1("Extention " + path.extension().string() + " in " + SfileName + ", searching " + namePart);
 				int pos = SfileName.find(namePart);
 
-				string sfilename;
-				transform(SfileName.begin(), SfileName.end(), std::back_inserter(sfilename), ::tolower);
-				int pos_empty = sfilename.find("empty");
-				int pos_lastshot = sfilename.find("lastshot");
+				//string sfilename;
+				//transform(SfileName.begin(), SfileName.end(), std::back_inserter(sfilename), ::tolower);
+				//int pos_empty = sfilename.find("empty");
+				//int pos_lastshot = sfilename.find("lastshot");
 
-				if (pos != string::npos && pos != -1 && pos_empty == string::npos && pos_lastshot == string::npos) {
+				if (pos != string::npos && pos != -1 && checkName(SfileName, EXCLUDED_NAMES)) {
 					folderMap scanResult;
 					scanResult.getParams(themap, SfileName);
 					_maps.push_back(scanResult);
