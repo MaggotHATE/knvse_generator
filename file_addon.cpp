@@ -474,20 +474,12 @@ bool writeType(folderMap _map) {
 	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\_Types\)";
 
 	
-	//arrayWeaponsDB[formfolderPair.second] = json::array();
-	//Log1("Registered2 form " + weaps.hexedID + ": " + weaps.fileModName + ": " + weaps.typeFolder);
 	json rootArr = json::array();
 
 	///write to json here
 	
 	for (auto params : _map.typeParams) {
-		//json subMod = json::object();
-		//subMod["folderType"] = _map.folderName;
-		//subMod["typedata"] = params;
-		//subMod["typedata"] = "[" + to_string(params[0]) + ", " + to_string(params[1]) + ", " + to_string(params[2]) + ", " + to_string(params[3]) + "]";
-		
 
-		//rootArr.push_back(subMod);
 		json subMod = params;
 		rootArr.push_back({ { "folderType", _map.folderName },{"typedata", subMod } });
 	}
@@ -633,24 +625,41 @@ map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData) {
 	aniMap themap;
 	map<string, map<string, vector<int>>> _maps;
 	int numTypes = 0;
+	std::vector<std::thread> threads;
+
+	auto scanAFolder = [](aniMap themap, string SfileName, vector<int>& weaponData, map<string, map<string, vector<int>>>& _maps) {
+		folderMap scanResult;
+		scanResult.getParams(themap, SfileName);
+
+		_maps[SfileName] = scanResult.getWeaponScan(weaponData);
+	};
+
+
 
 	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride)";
 	if (filesystem::exists(dir))
 	{
 		for (filesystem::directory_iterator iter(dir.c_str()), end; iter != end; ++iter)
 		{
+			
 			const auto& path = iter->path();
 			const auto& fileName = path.filename();
 			const auto& SfileName = fileName.string();
-			Log1("Checking " + SfileName);
+			
 			if (path.extension().string().empty() || path.extension().string() == "")
 			{
-					folderMap scanResult;
-					scanResult.getParams(themap, SfileName);
-					_maps[SfileName] = scanResult.getWeaponScan(weaponData);
+				Log1("Checking " + SfileName);
+				//folderMap scanResult;
+					//scanResult.getParams(themap, SfileName);
+					//_maps[SfileName] = scanResult.getWeaponScan(weaponData);
+				//scanAFolder(themap, SfileName, weaponData, _maps);
+				threads.push_back( thread(scanAFolder,themap, SfileName, ref(weaponData), ref(_maps)) );
+				
 			}
 		}
 	}
+	for (auto& th : threads) th.join();
+
 	return _maps;
 }
 

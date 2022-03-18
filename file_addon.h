@@ -4,6 +4,7 @@
 #include "json.h"
 
 #include <stdexcept>
+#include <thread>
 
 using namespace std;
 
@@ -76,74 +77,96 @@ struct aniMap {
 		{"placemine2" , 108}
 	};
 
-	map<string, map<string, int>> scanForMatch(string foldername) {
-		map<string, map<string, int>> result;
+	void scanFiles (const string SfileName0, map<string, map<string, int>>& result) {
+		string loclog = "scanFiles "+ SfileName0 + " \n";
+		string SfileName;
+		transform(SfileName0.begin(), SfileName0.end(), std::back_inserter(SfileName), ::tolower);
+		//Log1(" Valid file !");
+		int aType = -1;
+		for (int i = 0; i < Type.size(); i++) {
+			int pos = SfileName.find(Type[i]);
+			//Log1(" Found " + Type[i] + " in " + to_string(pos));
+			if (pos != string::npos && pos != -1) {
+				//Log1(" Has " + Type[i] + " at " + to_string(i) + ", proceeding...");
+				loclog += " Has " + Type[i] + " at " + to_string(i) + ", proceeding...\n";
+				aType = i;
+				int aReload = -1;
+				for (int j = 0; j < Reload.size(); j++) {
+					int pos1 = SfileName.find(Reload[j]);
+
+					if (pos1 != string::npos) {
+						aReload = j;
+						//Log1(" Found Reload " + Reload[j] + " in " + to_string(j));
+						
+						result[Type[i] + to_string(aType)]["Grip"] = -1;
+						result[Type[i] + to_string(aType)][Reload[j]] = aReload;
+						//Log1("Found reload anim " + SfileName + " for " + to_string(aType) + " -1 " + to_string(aReload) + " -1 ");
+						loclog += "Found reload anim " + SfileName + " for " + to_string(aType) + " -1 " + to_string(aReload) + " -1 \n";
+					}
+				}
+				if (aReload == -1) {
+					int aAttk = -1;
+					auto last = SfileName.length() - 6;
+					string subname = SfileName.substr(3, last);
+					//Log1(" Searching for " + subname + " between 3 and " + to_string(last));
+
+					try
+					{
+						//Log1(" Found " + to_string(k));
+						if (Attk1.at(subname)) {
+
+							aAttk = Attk1.at(subname);
+							//Log1(" Found Attk " + subname + " in " + to_string(aAttk) + " at " + to_string(pos));
+							result[Type[i] + to_string(aType)][subname] = aAttk;
+							//Log1("Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk));
+							loclog += "Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + "\n";
+						}
+					}
+					catch (const out_of_range& oor) {
+						//Log1("This weapontype wasn't defined: " + weapType[i]);
+						//result[Type[i]]["noattacks"]= -2;
+					}
+				}
+			}
+		}
+		Log1(loclog);
+		//if (aType == -1) Log1(" Useless file !");
+	};
+
+	void scanForMatch(string foldername, map<string, map<string, int>>& _result) {
+		//map<string, map<string, int>> _result;
+		string loclog = "\n";
 		string fullpath = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)" + foldername + R"(\_1stPerson\)";
+		std::vector<std::thread> threads;
+		
+		auto checkFile = [this](string pathString, const string SfileName0, map<string, map<string, int>>& _result)  {
+			if (_stricmp(pathString.c_str(), ".kf") == 0) {
+				scanFiles(SfileName0, _result);
+			}
+		};
+
 		if (filesystem::exists(fullpath))
 		{
-			Log1(" SCANNING " + fullpath);
+			//Log1(" SCANNING " + fullpath);
+			loclog += " SCANNING " + fullpath;
 			for (filesystem::directory_iterator iter(fullpath.c_str()), end; iter != end; ++iter)
 			{
 				const auto& path = iter->path();
 				const auto& fileName = path.filename();
 				const string SfileName0 = fileName.string();
-				string SfileName;
+				
 				
 				//vector<int> params;
-				Log1(" Checking file " + SfileName0);
-				if (_stricmp(path.extension().string().c_str(), ".kf") == 0) {
-					transform(SfileName0.begin(), SfileName0.end(), std::back_inserter(SfileName), ::tolower);
-					Log1(" Valid file !");
-					int aType = -1;
-					for (int i = 0; i < Type.size(); i++) {
-						int pos = SfileName.find(Type[i]);
-						//Log1(" Found " + Type[i] + " in " + to_string(pos));
-						if (pos != string::npos && pos != -1) {
-							Log1(" Has " + Type[i] + " at " + to_string(i) + ", proceeding...");
-							aType = i;
-							int aReload = -1;
-							for (int j = 0; j < Reload.size(); j++) {
-								int pos1 = SfileName.find(Reload[j]);
-								
-								if (pos1 != string::npos) {
-									aReload = j;
-									Log1(" Found Reload " + Reload[j] + " in " + to_string(j));
-									result[Type[i]]["Grip"] = -1;
-									result[Type[i]][Reload[j]] = aReload;
-									Log1("Found reload anim " + SfileName + " for " + to_string(aType) + " -1 " + to_string(aReload) + " -1 ");
-								}
-							}
-							if (aReload == -1) {
-								int aAttk = -1;
-								auto last = SfileName.length() - 6;
-								string subname = SfileName.substr(3, last);
-								Log1(" Searching for " + subname + " between 3 and " + to_string(last));
+				//Log1(" Checking file " + SfileName0);
+				checkFile(path.extension().string(), SfileName0, _result);
 
-								try 
-								{
-									//Log1(" Found " + to_string(k));
-									if (Attk1.at(subname)) {
-										
-										aAttk = Attk1.at(subname);
-										Log1(" Found Attk " + subname + " in " + to_string(aAttk) + " at " + to_string(pos));
-										result[Type[i]][subname]= aAttk;
-										Log1("Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk));
-									}
-								}
-								catch (const out_of_range& oor) {
-									//Log1("This weapontype wasn't defined: " + weapType[i]);
-									//result[Type[i]]["noattacks"]= -2;
-								}
-							}
-							
-						}
-					}
-					if (aType == -1) Log1(" Useless file !");
-				}
-				
+				//threads.push_back(thread(checkFile, path.extension().string(), SfileName0, ref(_result)));
 			}
 		}
-		return result;
+		Log1(loclog);
+
+		for (auto& th : threads) th.join();
+		//return _result;
 	}
 
 
@@ -351,9 +374,24 @@ struct folderMap {
 
 	bool getParams(aniMap ani, string folder) {
 		folderName = folder;
-		parsed = ani.scanForMatch(folder);
+		std::vector<std::thread> threads;
+
+		auto scan = [](aniMap ani, string folder, map<string, map<string, int>>& parsed) {
+			ani.scanForMatch(folder, parsed);
+		};
+
+		//parsed = ani.scanForMatch(folder);
+		threads.push_back(thread(scan,ani, folder, ref(parsed)));
+
+		for (auto& th : threads) th.join();
+
 		for (auto data : parsed) {
-			int type = distance(ani.Type.begin(), find(ani.Type.begin(), ani.Type.end(), data.first));
+			
+			//int type = distance(ani.Type.begin(), find(ani.Type.begin(), ani.Type.end(), data.first));
+			int type = data.first.back() - '0';
+			//Log1(("Cheching from parsed: [" + to_string(type) + "] ").c_str());
+			string loclog = "Cheching from parsed: [" + data.first + "] " + to_string(type) + "\n";
+			//Log1(("Cheching from parsed: [" + data.first + "] " + to_string(type)).c_str());
 			subMap currenSM;
 			currenSM.type = data.first;
 			currenSM.typeData = type;
@@ -364,10 +402,14 @@ struct folderMap {
 				if (param.first.find("reload") != param.first.npos) {
 					currenSM.reloads.push_back(param.second);
 					currenSM.Sreloads += " " + to_string(param.second);
+					//Log1(("Found reload " + to_string(param.second)  + " in [" + to_string(type) + "] ").c_str());
+					loclog += "Found reload " + to_string(param.second) + " in [" + to_string(type) + "] \n";
 				}
 				else if (param.first.find("attack") != param.first.npos || param.first.find("place") != param.first.npos) {
 					currenSM.attacks.push_back(param.second);
 					currenSM.Sattacks += " " + to_string(param.second);
+					//Log1(("Found attack " + to_string(param.second) + " in [" + to_string(type) + "] ").c_str());
+					loclog += "Found attack " + to_string(param.second) + " in [" + to_string(type) + "] \n";
 				}
 				else currenSM.grips.push_back(param.second);
 			}
@@ -377,6 +419,7 @@ struct folderMap {
 				}
 			}
 			subMaps.push_back(currenSM);
+			Log1(loclog);
 		}
 	}
 

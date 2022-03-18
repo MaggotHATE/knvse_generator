@@ -37,6 +37,15 @@ static ParamInfo kParams_OneString_ThreeOptionalStringsFiveOptionalInts[9] =
 	{	"int", kParamType_Integer, 1 },
 };
 
+static ParamInfo kParams_OneOptionalString_FourOptionalInts[5] =
+{
+	{	"string",		kParamType_String,			1	},
+	{	"int", kParamType_Integer, 1 },
+	{	"int", kParamType_Integer, 1 },
+	{	"int", kParamType_Integer, 1 },
+	{	"int", kParamType_Integer, 1 },
+};
+
 static ParamInfo kParams_FourOptionalInts[4] =
 {
 	{	"int", kParamType_Integer, 1 },
@@ -252,7 +261,7 @@ bool Cmd_knvse_deepscan_Execute(COMMAND_ARGS)
 	int handGrip = 000;
 	int reloadAnim = 00;
 	int attackAnim = 00;
-	int moreIfnfo = 0;
+	char moreIfnfo = 'f';
 
 	weaponType weaparams = getWeaponData1(weap);
 	
@@ -269,13 +278,13 @@ bool Cmd_knvse_deepscan_Execute(COMMAND_ARGS)
 		}
 
 		for (auto folder : dataMap) {
-			if (moreIfnfo == 0 || moreIfnfo > 2) {
+			if (moreIfnfo != 'a' && moreIfnfo != 'r') {
 				if (folder.second["matched"][0] != 0 && folder.second["matched"][1] != 0 && folder.second["matched"][3] != 0 && folder.second["matched"][4] != 0) {
 					Log1((folder.first + ": full match [" + to_string(folder.second["matched"][0]) + " " + to_string(folder.second["matched"][1]) + " " + to_string(folder.second["matched"][2]) + " " + to_string(folder.second["matched"][3]) + "] ").c_str());
 					Console_Print((folder.first + ": full match [" + to_string(folder.second["matched"][0]) + " " + to_string(folder.second["matched"][1]) + " " + to_string(folder.second["matched"][2]) + " " + to_string(folder.second["matched"][3]) + "] ").c_str());
 				}
 			}
-			if (moreIfnfo == 1 || moreIfnfo > 2) {
+			if (moreIfnfo != 'a' && moreIfnfo != 'f') {
 				if (folder.second["reload"].size() > 0) {
 					string reloads;
 					for (auto reload : folder.second["reload"]) {
@@ -285,7 +294,7 @@ bool Cmd_knvse_deepscan_Execute(COMMAND_ARGS)
 					Console_Print((folder.first + ": only reload, attacks: [" + reloads + "] ").c_str());
 				}
 			}
-			if (moreIfnfo >= 2) {
+			if (moreIfnfo != 'r' && moreIfnfo != 'f') {
 				if (folder.second["attack"].size() > 0)
 				{
 					string attacks;
@@ -298,13 +307,13 @@ bool Cmd_knvse_deepscan_Execute(COMMAND_ARGS)
 			}
 		}
 	}
-	else Console_Print("0 is full match only, 1 is attacks, 2 is reloads, more is all. The rest is four parameters");
+	else Console_Print("f is full match only, a is attacks, r is reloads, anything else is all. The rest is four parameters");
 
 	return true;
 }
 #endif
 
-DEFINE_COMMAND_PLUGIN(knvse_deepscan, "Scans all the folders for animations and looks for mathing parameters", 0, 5, kParams_FiveOptionalInts)
+DEFINE_COMMAND_PLUGIN(knvse_deepscan, "Scans all the folders for animations and looks for mathing parameters", 0, 5, kParams_OneOptionalString_FourOptionalInts)
 
 bool Cmd_knvse_generatetypes_Execute(COMMAND_ARGS);
 
