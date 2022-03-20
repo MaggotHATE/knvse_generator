@@ -614,6 +614,7 @@ int writeTypesFolders(string namePart) {
 					numTypes += scanResult.typeParams.size();
 				}
 			}
+
 			Log1("Total " + to_string(numTypes)+" types;");
 		}
 	}
@@ -649,10 +650,7 @@ map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData) {
 			if (path.extension().string().empty() || path.extension().string() == "")
 			{
 				Log1("Checking " + SfileName);
-				//folderMap scanResult;
-					//scanResult.getParams(themap, SfileName);
-					//_maps[SfileName] = scanResult.getWeaponScan(weaponData);
-				//scanAFolder(themap, SfileName, weaponData, _maps);
+
 				threads.push_back( thread(scanAFolder,themap, SfileName, ref(weaponData), ref(_maps)) );
 				
 			}

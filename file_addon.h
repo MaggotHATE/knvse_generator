@@ -5,6 +5,9 @@
 
 #include <stdexcept>
 #include <thread>
+#include <future>
+#include <chrono>
+
 
 using namespace std;
 
@@ -133,22 +136,31 @@ struct aniMap {
 		//if (aType == -1) Log1(" Useless file !");
 	};
 
+/*
 	void scanForMatch(string foldername, map<string, map<string, int>>& _result) {
 		//map<string, map<string, int>> _result;
+		map<string, map<string, int>> result_;
 		string loclog = "\n";
 		string fullpath = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)" + foldername + R"(\_1stPerson\)";
-		std::vector<std::thread> threads;
 		
-		auto checkFile = [this](string pathString, const string SfileName0, map<string, map<string, int>>& _result)  {
-			if (_stricmp(pathString.c_str(), ".kf") == 0) {
-				scanFiles(SfileName0, _result);
-			}
+		//auto checkFile = [](aniMap* ani, string pathString, const string SfileName0, map<string, map<string, int>>& _result)  {
+		//	if (_stricmp(pathString.c_str(), ".kf") == 0) {
+		//		ani -> scanFiles(SfileName0, _result);
+		//	}
+		//};
+
+		auto checkFile = [](aniMap* ani, const string SfileName0, map<string, map<string, int>>& _result) {
+
+			ani->scanFiles(SfileName0, _result);
+
 		};
 
 		if (filesystem::exists(fullpath))
 		{
 			//Log1(" SCANNING " + fullpath);
 			loclog += " SCANNING " + fullpath;
+			//std::vector<std::thread> threadsScan;
+
 			for (filesystem::directory_iterator iter(fullpath.c_str()), end; iter != end; ++iter)
 			{
 				const auto& path = iter->path();
@@ -158,17 +170,116 @@ struct aniMap {
 				
 				//vector<int> params;
 				//Log1(" Checking file " + SfileName0);
-				checkFile(path.extension().string(), SfileName0, _result);
+				//checkFile(this, path.extension().string(), SfileName0, _result);
 
-				//threads.push_back(thread(checkFile, path.extension().string(), SfileName0, ref(_result)));
+				//threadsScan.push_back(thread(checkFile, this, path.extension().string(), SfileName0, ref(_result)));
+				//threadsScan.push_back(thread(checkAFile, path.extension().string(), SfileName0, ref(_result)));
+				//std::promise<int> prom;
+				if (_stricmp(path.extension().string().c_str(), ".kf") == 0) {
+					//scanFiles(SfileName0, _result);
+					//checkFile(this, SfileName0, _result);
+					//threadsScan.push_back(thread(checkFile,this, SfileName0, ref(result_)));
+					future<void> fut = async(checkFile, this, SfileName0, ref(_result));
+					chrono::milliseconds span(100);
+				}
+
 			}
+
+			//for (auto& thS : threadsScan) thS.join();
 		}
 		Log1(loclog);
 
-		for (auto& th : threads) th.join();
+		
 		//return _result;
 	}
 
+	*/
+
+	future<map<string, map<string, int>>> scanForMatch1(string foldername) {
+		map<string, map<string, int>> _result;
+		future<map<string, map<string, int>>> fut;
+		
+		string loclog = "\n";
+		string fullpath = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)" + foldername + R"(\_1stPerson\)";
+
+		auto checkFile = [](aniMap* ani, const string SfileName0) {
+
+			map<string, map<string, int>> _result;
+
+			ani->scanFiles(SfileName0, _result);
+
+			return _result;
+		};
+
+		if (filesystem::exists(fullpath))
+		{
+			//Log1(" SCANNING " + fullpath);
+			loclog += " SCANNING " + fullpath;
+			//std::vector<std::thread> threadsScan;
+
+			for (filesystem::directory_iterator iter(fullpath.c_str()), end; iter != end; ++iter)
+			{
+				const auto& path = iter->path();
+				const auto& fileName = path.filename();
+				const string SfileName0 = fileName.string();
+
+				if (_stricmp(path.extension().string().c_str(), ".kf") == 0) {
+					scanFiles(SfileName0, _result);
+					fut = async(launch::async, checkFile, this, SfileName0);
+					//fut.wait();
+					chrono::milliseconds span(100);
+				}
+
+			}
+
+		}
+		Log1(loclog);
+
+
+		return fut;
+	};
+
+	map<string, map<string, int>> scanForMatch2(string foldername) {
+		map<string, map<string, int>> _result;
+		future<map<string, map<string, int>>> fut;
+
+		string loclog = "\n";
+		string fullpath = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)" + foldername + R"(\_1stPerson\)";
+
+		auto checkFile = [](aniMap* ani, const string SfileName0, map<string, map<string, int>>& _result) {
+
+			ani->scanFiles(SfileName0, _result);
+
+			return _result;
+		};
+
+		if (filesystem::exists(fullpath))
+		{
+			//Log1(" SCANNING " + fullpath);
+			loclog += " SCANNING " + fullpath;
+			//std::vector<std::thread> threadsScan;
+
+			for (filesystem::directory_iterator iter(fullpath.c_str()), end; iter != end; ++iter)
+			{
+				const auto& path = iter->path();
+				const auto& fileName = path.filename();
+				const string SfileName0 = fileName.string();
+
+				if (_stricmp(path.extension().string().c_str(), ".kf") == 0) {
+					scanFiles(SfileName0, _result);
+					fut = async(launch::async, checkFile, this, SfileName0, ref(_result));
+					//fut.wait();
+					chrono::milliseconds span(100);
+				}
+
+			}
+
+		}
+		Log1(loclog);
+
+
+		return _result;
+	};
 
 };
 
@@ -374,16 +485,19 @@ struct folderMap {
 
 	bool getParams(aniMap ani, string folder) {
 		folderName = folder;
-		std::vector<std::thread> threads;
+		
 
-		auto scan = [](aniMap ani, string folder, map<string, map<string, int>>& parsed) {
-			ani.scanForMatch(folder, parsed);
-		};
+		//auto scan = [](aniMap ani, string folder, map<string, map<string, int>>& parsed) {
+		//	ani.scanForMatch(folder, parsed);
+		//};
 
-		//parsed = ani.scanForMatch(folder);
-		threads.push_back(thread(scan,ani, folder, ref(parsed)));
+		//ani.scanForMatch(folder, parsed);
 
-		for (auto& th : threads) th.join();
+		//future<map<string, map<string, int>>> parsedF = ani.scanForMatch1(folder);
+		//parsed = parsedF.get();
+		parsed = ani.scanForMatch2(folder);
+		//future<void> fut = async(scan,ani, folder, ref(parsed));
+		//chrono::milliseconds span(1000);
 
 		for (auto data : parsed) {
 			
