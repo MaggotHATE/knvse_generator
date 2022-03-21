@@ -263,13 +263,13 @@ bool Cmd_knvse_deepscan_Execute(COMMAND_ARGS)
 	int attackAnim = 00;
 	char moreIfnfo = 'f';
 
-	weaponType weaparams = getWeaponData1(weap);
-	
-
 	if (ExtractArgs(EXTRACT_ARGS, &moreIfnfo, &eWeaponType, &handGrip, &reloadAnim, &attackAnim)) {
+		
+
 		map<string, map<string, vector<int>>> dataMap;
 
 		if (eWeaponType == 00 && handGrip == 000 && reloadAnim == 00 && attackAnim == 00) {
+			weaponType weaparams = getWeaponData1(weap);
 			Console_Print(FormatString("Parameters: %d %d %d %d", weaparams.typeParams[0], weaparams.typeParams[1], weaparams.typeParams[2], weaparams.typeParams[3]).c_str());
 			dataMap = DEEPscan(weaparams.typeParams);
 		} else {

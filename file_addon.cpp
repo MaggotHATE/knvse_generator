@@ -627,6 +627,7 @@ map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData) {
 	map<string, map<string, vector<int>>> _maps;
 	int numTypes = 0;
 	std::vector<std::thread> threads;
+	const auto then = chrono::system_clock::now();
 
 	auto scanAFolder = [](aniMap themap, string SfileName, vector<int>& weaponData, map<string, map<string, vector<int>>>& _maps) {
 		folderMap scanResult;
@@ -649,7 +650,7 @@ map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData) {
 			
 			if (path.extension().string().empty() || path.extension().string() == "")
 			{
-				Log1("Checking " + SfileName);
+				//Log1("Checking " + SfileName);
 
 				threads.push_back( thread(scanAFolder,themap, SfileName, ref(weaponData), ref(_maps)) );
 				
@@ -658,6 +659,9 @@ map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData) {
 	}
 	for (auto& th : threads) th.join();
 
+	const auto now = chrono::system_clock::now();
+	const auto diff = chrono::duration_cast<chrono::milliseconds>(now - then);
+	Log1(FormatString("DEEP scanned in %d ms", diff.count()));
 	return _maps;
 }
 

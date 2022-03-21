@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <thread>
 #include <future>
-#include <chrono>
+//#include <chrono>
 
 
 using namespace std;
@@ -132,7 +132,7 @@ struct aniMap {
 				}
 			}
 		}
-		Log1(loclog);
+		//Log1(loclog);
 		//if (aType == -1) Log1(" Useless file !");
 	};
 
@@ -239,11 +239,12 @@ struct aniMap {
 		return fut;
 	};
 
-	map<string, map<string, int>> scanForMatch2(string foldername) {
+	vector<map<string, map<string, int>>> scanForMatch2(string foldername) {
 		map<string, map<string, int>> _result;
-		future<map<string, map<string, int>>> fut;
+		//future<map<string, map<string, int>>> fut;
+		vector<map<string, map<string, int>>> temps;
 
-		string loclog = "\n";
+		string loclog = "scanForMatch2 \n";
 		string fullpath = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)" + foldername + R"(\_1stPerson\)";
 
 		auto checkFile = [](aniMap* ani, const string SfileName0, map<string, map<string, int>>& _result) {
@@ -253,10 +254,19 @@ struct aniMap {
 			return _result;
 		};
 
+		auto checkFile1 = [](aniMap* ani, const string SfileName0) {
+
+			map<string, map<string, int>> _result;
+
+			ani->scanFiles(SfileName0, _result);
+
+			return _result;
+		};
+
 		if (filesystem::exists(fullpath))
 		{
 			//Log1(" SCANNING " + fullpath);
-			loclog += " SCANNING " + fullpath;
+			loclog += " SCANNING " + fullpath + " \n";
 			//std::vector<std::thread> threadsScan;
 
 			for (filesystem::directory_iterator iter(fullpath.c_str()), end; iter != end; ++iter)
@@ -266,19 +276,20 @@ struct aniMap {
 				const string SfileName0 = fileName.string();
 
 				if (_stricmp(path.extension().string().c_str(), ".kf") == 0) {
-					scanFiles(SfileName0, _result);
-					fut = async(launch::async, checkFile, this, SfileName0, ref(_result));
-					//fut.wait();
-					chrono::milliseconds span(100);
+					//scanFiles(SfileName0, _result);
+					//auto fut = async(launch::async, checkFile, this, SfileName0, ref(_result));
+					auto fut = async(launch::async, checkFile1, this, SfileName0);
+					fut.wait();
+					temps.push_back(fut.get());
+					
 				}
 
 			}
 
 		}
-		Log1(loclog);
 
-
-		return _result;
+		//Log1(loclog);
+		return temps;
 	};
 
 };
@@ -482,8 +493,10 @@ struct folderMap {
 	map<string, map<string, int>> parsed;
 	vector<vector<int>> typeParams;
 	vector<subMap> subMaps;
+	
 
 	bool getParams(aniMap ani, string folder) {
+		const auto then = chrono::system_clock::now();
 		folderName = folder;
 		
 
@@ -495,7 +508,18 @@ struct folderMap {
 
 		//future<map<string, map<string, int>>> parsedF = ani.scanForMatch1(folder);
 		//parsed = parsedF.get();
-		parsed = ani.scanForMatch2(folder);
+		//parsed = ani.scanForMatch2(folder);
+		vector<map<string, map<string, int>>> temps = ani.scanForMatch2(folder);
+		string loclog;
+
+		for (auto temp : temps) {
+			for (auto tem : temp) {
+				for (auto te : tem.second) {
+					//loclog += " Reassembling " + tem.first + ": Item " + te.first + " = " + to_string(te.second) + " \n";
+					parsed[tem.first][te.first] = te.second;
+				}
+			}
+		}
 		//future<void> fut = async(scan,ani, folder, ref(parsed));
 		//chrono::milliseconds span(1000);
 
@@ -504,7 +528,7 @@ struct folderMap {
 			//int type = distance(ani.Type.begin(), find(ani.Type.begin(), ani.Type.end(), data.first));
 			int type = data.first.back() - '0';
 			//Log1(("Cheching from parsed: [" + to_string(type) + "] ").c_str());
-			string loclog = "Cheching from parsed: [" + data.first + "] " + to_string(type) + "\n";
+			loclog += "Cheching from parsed: [" + data.first + "] " + to_string(type) + "\n";
 			//Log1(("Cheching from parsed: [" + data.first + "] " + to_string(type)).c_str());
 			subMap currenSM;
 			currenSM.type = data.first;
@@ -533,12 +557,18 @@ struct folderMap {
 				}
 			}
 			subMaps.push_back(currenSM);
-			Log1(loclog);
+			//Log1(loclog);
 		}
+
+		const auto now = chrono::system_clock::now();
+		const auto diff = chrono::duration_cast<chrono::milliseconds>(now - then);
+		Log1(FormatString("Params got in %d ms", diff.count()));
 	}
 
 	map<string, vector<int>> getWeaponScan(vector<int> weaponData) {
+		const auto then = chrono::system_clock::now();
 		map<string, vector<int>> matchMap;
+		string loclog;
 		for (auto param : typeParams) {
 			//Log1(" TARGET param: [ " + to_string(weaponData[0]) + " " + to_string(weaponData[1]) + " " + to_string(weaponData[2]) + " " + to_string(weaponData[3]) + "] ");
 			if (param[0] == weaponData[0] && param[2] == weaponData[2] && param[3] == weaponData[3]) {
@@ -562,8 +592,12 @@ struct folderMap {
 		for (auto reload : matchMap["reload"]) {
 			reloads += " " + to_string(reload);
 		}
-		Log1(("Total half-matched reloads: [" + reloads + "] ").c_str());
-		Log1(("Total half-matched attacks: [" + attacks + "] ").c_str());
+		loclog +=("Total half-matched reloads: [" + reloads + "] ");
+		loclog += ("Total half-matched attacks: [" + attacks + "] ");
+		//Log1(loclog);
+		const auto now = chrono::system_clock::now();
+		const auto diff = chrono::duration_cast<chrono::milliseconds>(now - then);
+		Log1(FormatString("Weapon scanned in %d ms", diff.count()));
 
 		return matchMap;
 	}
