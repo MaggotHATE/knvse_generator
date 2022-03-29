@@ -202,8 +202,7 @@
     </Link>
     <PostBuildEvent>
       <Message>Installing DLL...</Message>
-      <Command>
-      </Command>
+      <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Fallout New Vegas enplczru\Data\NVSE\plugins\$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release GECK|Win32'">

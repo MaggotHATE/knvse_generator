@@ -80,7 +80,7 @@ struct aniMap {
 		{"placemine2" , 108}
 	};
 
-	void scanFiles (const string SfileName0, map<string, map<string, int>>& result) {
+	const void scanFiles (const string SfileName0, map<string, map<string, int>>& result) {
 		string loclog = "scanFiles "+ SfileName0 + " \n";
 		string SfileName;
 		transform(SfileName0.begin(), SfileName0.end(), std::back_inserter(SfileName), ::tolower);
@@ -195,6 +195,7 @@ struct aniMap {
 
 	*/
 
+/*
 	future<map<string, map<string, int>>> scanForMatch1(string foldername) {
 		map<string, map<string, int>> _result;
 		future<map<string, map<string, int>>> fut;
@@ -227,7 +228,7 @@ struct aniMap {
 					scanFiles(SfileName0, _result);
 					fut = async(launch::async, checkFile, this, SfileName0);
 					//fut.wait();
-					chrono::milliseconds span(100);
+					//chrono::milliseconds span(100);
 				}
 
 			}
@@ -238,21 +239,15 @@ struct aniMap {
 
 		return fut;
 	};
+	*/
 
 	vector<map<string, map<string, int>>> scanForMatch2(string foldername) {
 		map<string, map<string, int>> _result;
-		//future<map<string, map<string, int>>> fut;
 		vector<map<string, map<string, int>>> temps;
+		vector<future<map<string, map<string, int>>>> tempsFuture1;
 
 		string loclog = "scanForMatch2 \n";
 		string fullpath = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)" + foldername + R"(\_1stPerson\)";
-
-		auto checkFile = [](aniMap* ani, const string SfileName0, map<string, map<string, int>>& _result) {
-
-			ani->scanFiles(SfileName0, _result);
-
-			return _result;
-		};
 
 		auto checkFile1 = [](aniMap* ani, const string SfileName0) {
 
@@ -265,9 +260,7 @@ struct aniMap {
 
 		if (filesystem::exists(fullpath))
 		{
-			//Log1(" SCANNING " + fullpath);
 			loclog += " SCANNING " + fullpath + " \n";
-			//std::vector<std::thread> threadsScan;
 
 			for (filesystem::directory_iterator iter(fullpath.c_str()), end; iter != end; ++iter)
 			{
@@ -276,19 +269,17 @@ struct aniMap {
 				const string SfileName0 = fileName.string();
 
 				if (_stricmp(path.extension().string().c_str(), ".kf") == 0) {
-					//scanFiles(SfileName0, _result);
-					//auto fut = async(launch::async, checkFile, this, SfileName0, ref(_result));
-					auto fut = async(launch::async, checkFile1, this, SfileName0);
-					fut.wait();
-					temps.push_back(fut.get());
-					
+					tempsFuture1.push_back(async(launch::async, checkFile1, this, SfileName0));
 				}
 
 			}
 
 		}
 
-		//Log1(loclog);
+		for (auto& temp : tempsFuture1) {
+			temps.push_back(temp.get());
+		}		
+
 		return temps;
 	};
 
@@ -510,6 +501,8 @@ struct folderMap {
 		//parsed = parsedF.get();
 		//parsed = ani.scanForMatch2(folder);
 		vector<map<string, map<string, int>>> temps = ani.scanForMatch2(folder);
+		//vector<map<string, map<string, int>>> temps;// = ani.scanForMatch2(folder);
+		//vector<future<map<string, map<string, int>>>> tempsF = ani.scanForMatch3(folder);
 		string loclog;
 
 		for (auto temp : temps) {
