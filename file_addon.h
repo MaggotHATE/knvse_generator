@@ -80,10 +80,14 @@ struct aniMap {
 		{"placemine2" , 108}
 	};
 
-	const void scanFiles (const string SfileName0, map<string, map<string, int>>& result) {
-		string loclog = "scanFiles "+ SfileName0 + " \n";
+	string scanFiles (const string SfileName0, map<string, map<string, int>>& result) {
 		string SfileName;
 		transform(SfileName0.begin(), SfileName0.end(), std::back_inserter(SfileName), ::tolower);
+		auto last = SfileName.length() - 6;
+		string subname = SfileName.substr(3, last);
+		string subname1 = subname.substr(0, last-2);
+
+		string loclog = "\n scanFiles "+ SfileName0 + ": " + subname + " or " + subname1 +" \n";
 		//Log1(" Valid file !");
 		int aType = -1;
 		for (int i = 0; i < Type.size(); i++) {
@@ -91,13 +95,13 @@ struct aniMap {
 			//Log1(" Found " + Type[i] + " in " + to_string(pos));
 			if (pos != string::npos && pos != -1) {
 				//Log1(" Has " + Type[i] + " at " + to_string(i) + ", proceeding...");
-				loclog += " Has " + Type[i] + " at " + to_string(i) + ", proceeding...\n";
+				//loclog += " Has " + Type[i] + " at " + to_string(i) + ", proceeding...\n";
 				aType = i;
 				int aReload = -1;
 				for (int j = 0; j < Reload.size(); j++) {
 					int pos1 = SfileName.find(Reload[j]);
 
-					if (pos1 != string::npos) {
+					if (pos1 != string::npos && aReload == -1) {
 						aReload = j;
 						//Log1(" Found Reload " + Reload[j] + " in " + to_string(j));
 						
@@ -109,10 +113,6 @@ struct aniMap {
 				}
 				if (aReload == -1) {
 					int aAttk = -1;
-					auto last = SfileName.length() - 6;
-					string subname = SfileName.substr(3, last);
-					//Log1(" Searching for " + subname + " between 3 and " + to_string(last));
-
 					try
 					{
 						//Log1(" Found " + to_string(k));
@@ -122,17 +122,38 @@ struct aniMap {
 							//Log1(" Found Attk " + subname + " in " + to_string(aAttk) + " at " + to_string(pos));
 							result[Type[i] + to_string(aType)][subname] = aAttk;
 							//Log1("Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk));
-							loclog += "Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + "\n";
+							loclog += "Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
 						}
 					}
 					catch (const out_of_range& oor) {
+						if (aAttk == -1)	try
+											{
+												//Log1(" Found " + to_string(k));
+												if (Attk1.at(subname1)) {
+
+													aAttk = Attk1.at(subname1);
+													//Log1(" Found Attk " + subname + " in " + to_string(aAttk) + " at " + to_string(pos));
+													result[Type[i] + to_string(aType)][subname1] = aAttk;
+													//Log1("Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk));
+													loclog += "Found additional attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
+												}
+											}
+											catch (const out_of_range& oor) {
+												//Log1("This weapontype wasn't defined: " + weapType[i]);
+												//result[Type[i]]["noattacks"]= -2;
+											}
+
 						//Log1("This weapontype wasn't defined: " + weapType[i]);
 						//result[Type[i]]["noattacks"]= -2;
 					}
+
+					
+
 				}
 			}
 		}
 		//Log1(loclog);
+		return loclog;
 		//if (aType == -1) Log1(" Useless file !");
 	};
 
@@ -246,21 +267,23 @@ struct aniMap {
 		vector<map<string, map<string, int>>> temps;
 		vector<future<map<string, map<string, int>>>> tempsFuture1;
 
-		string loclog = "scanForMatch2 \n";
+		//string loclog = "scanForMatch2 \n";
 		string fullpath = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\)" + foldername + R"(\_1stPerson\)";
 
-		auto checkFile1 = [](aniMap* ani, const string SfileName0) {
+		auto checkFile1 = [](aniMap* ani, const string SfileName0, string foldername) {
 
 			map<string, map<string, int>> _result;
 
-			ani->scanFiles(SfileName0, _result);
+			string loclog1 = " SCANNING " + foldername + " \n";
+			loclog1 += ani->scanFiles(SfileName0, _result);
+			Log1(loclog1);
 
 			return _result;
 		};
 
 		if (filesystem::exists(fullpath))
 		{
-			loclog += " SCANNING " + fullpath + " \n";
+			//loclog += " SCANNING " + fullpath + " \n";
 
 			for (filesystem::directory_iterator iter(fullpath.c_str()), end; iter != end; ++iter)
 			{
@@ -269,7 +292,7 @@ struct aniMap {
 				const string SfileName0 = fileName.string();
 
 				if (_stricmp(path.extension().string().c_str(), ".kf") == 0) {
-					tempsFuture1.push_back(async(launch::async, checkFile1, this, SfileName0));
+					tempsFuture1.push_back(async(launch::async, checkFile1, this, SfileName0, foldername));
 				}
 
 			}
@@ -278,7 +301,9 @@ struct aniMap {
 
 		for (auto& temp : tempsFuture1) {
 			temps.push_back(temp.get());
-		}		
+		}
+
+		//Log1(loclog);
 
 		return temps;
 	};
@@ -503,7 +528,7 @@ struct folderMap {
 		vector<map<string, map<string, int>>> temps = ani.scanForMatch2(folder);
 		//vector<map<string, map<string, int>>> temps;// = ani.scanForMatch2(folder);
 		//vector<future<map<string, map<string, int>>>> tempsF = ani.scanForMatch3(folder);
-		string loclog;
+		string loclog = " CHECKING " + folder + " \n";
 
 		for (auto temp : temps) {
 			for (auto tem : temp) {
@@ -521,7 +546,7 @@ struct folderMap {
 			//int type = distance(ani.Type.begin(), find(ani.Type.begin(), ani.Type.end(), data.first));
 			int type = data.first.back() - '0';
 			//Log1(("Cheching from parsed: [" + to_string(type) + "] ").c_str());
-			loclog += "Cheching from parsed: [" + data.first + "] " + to_string(type) + "\n";
+			loclog += "Checking from parsed: [" + data.first + "] " + to_string(type) + "\n";
 			//Log1(("Cheching from parsed: [" + data.first + "] " + to_string(type)).c_str());
 			subMap currenSM;
 			currenSM.type = data.first;
@@ -529,6 +554,8 @@ struct folderMap {
 
 			for (auto param : data.second) {
 
+				loclog += " Reading: [" + param.first + "] \n";
+				
 				//parameters.push_back(param.second);
 				if (param.first.find("reload") != param.first.npos) {
 					currenSM.reloads.push_back(param.second);
