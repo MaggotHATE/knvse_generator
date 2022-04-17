@@ -94,62 +94,67 @@ struct aniMap {
 			int pos = SfileName.find(Type[i]);
 			//Log1(" Found " + Type[i] + " in " + to_string(pos));
 			if (pos != string::npos && pos != -1) {
-				//Log1(" Has " + Type[i] + " at " + to_string(i) + ", proceeding...");
-				//loclog += " Has " + Type[i] + " at " + to_string(i) + ", proceeding...\n";
-				aType = i;
-				int aReload = -1;
-				for (int j = 0; j < Reload.size(); j++) {
-					int pos1 = SfileName.find(Reload[j]);
 
-					if (pos1 != string::npos && aReload == -1) {
-						aReload = j;
-						//Log1(" Found Reload " + Reload[j] + " in " + to_string(j));
-						
-						result[Type[i] + to_string(aType)]["Grip"] = -1;
-						result[Type[i] + to_string(aType)][Reload[j]] = aReload;
-						//Log1("Found reload anim " + SfileName + " for " + to_string(aType) + " -1 " + to_string(aReload) + " -1 ");
-						loclog += "Found reload anim " + SfileName + " for " + to_string(aType) + " -1 " + to_string(aReload) + " -1 \n";
+				aType = i;
+				int aAttk = -1;
+				try
+				{
+					//Log1(" Found " + to_string(k));
+					if (Attk1.at(subname)) {
+
+						aAttk = Attk1.at(subname);
+						result[Type[i] + to_string(aType)][subname] = aAttk;
+
+						//loclog += "Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
 					}
 				}
-				if (aReload == -1) {
-					int aAttk = -1;
-					try
+				catch (const out_of_range& oor) {
+					if (aAttk == -1)	try
 					{
 						//Log1(" Found " + to_string(k));
-						if (Attk1.at(subname)) {
+						if (Attk1.at(subname1)) {
 
-							aAttk = Attk1.at(subname);
-							//Log1(" Found Attk " + subname + " in " + to_string(aAttk) + " at " + to_string(pos));
-							result[Type[i] + to_string(aType)][subname] = aAttk;
-							//Log1("Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk));
-							loclog += "Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
+							aAttk = Attk1.at(subname1);
+							result[Type[i] + to_string(aType)][subname1] = aAttk;
+
+							//loclog += "Found additional attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
 						}
 					}
 					catch (const out_of_range& oor) {
-						if (aAttk == -1)	try
-											{
-												//Log1(" Found " + to_string(k));
-												if (Attk1.at(subname1)) {
-
-													aAttk = Attk1.at(subname1);
-													//Log1(" Found Attk " + subname + " in " + to_string(aAttk) + " at " + to_string(pos));
-													result[Type[i] + to_string(aType)][subname1] = aAttk;
-													//Log1("Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk));
-													loclog += "Found additional attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
-												}
-											}
-											catch (const out_of_range& oor) {
-												//Log1("This weapontype wasn't defined: " + weapType[i]);
-												//result[Type[i]]["noattacks"]= -2;
-											}
-
 						//Log1("This weapontype wasn't defined: " + weapType[i]);
 						//result[Type[i]]["noattacks"]= -2;
 					}
 
-					
-
+					//Log1("This weapontype wasn't defined: " + weapType[i]);
+					//result[Type[i]]["noattacks"]= -2;
 				}
+				
+				if (aAttk != -1 && (Type[i] == "1hm" || Type[i] == "2hm" || Type[i] == "h2h") ) {
+					result[Type[i] + to_string(aType)]["Grip"] = -1;
+					result[Type[i] + to_string(aType)][Reload[0]] = -1;
+					result[Type[i] + to_string(aType)][subname1] = 255;
+
+					loclog += "Melees don't reload and use 255 for attack, skipping: " + SfileName + " for " + to_string(aType) + " -1 -1 255 \n";
+				} else if (aAttk == -1) {
+					int aReload = -1;
+					{
+						for (int j = 0; j < Reload.size(); j++) {
+							int pos1 = SfileName.find(Reload[j]);
+
+							if (pos1 != string::npos && aReload == -1) {
+								aReload = j;
+
+								result[Type[i] + to_string(aType)]["Grip"] = -1;
+								result[Type[i] + to_string(aType)][Reload[j]] = aReload;
+
+								//loclog += "Found reload anim " + SfileName + " for " + to_string(aType) + " -1 " + to_string(aReload) + " -1 \n";
+							}
+						}
+					}
+				}
+				//if (aReload == -1) {
+				//	
+				//}
 			}
 		}
 		//Log1(loclog);
@@ -274,8 +279,8 @@ struct aniMap {
 
 			map<string, map<string, int>> _result;
 
-			string loclog1 = " SCANNING " + foldername + " \n";
-			loclog1 += ani->scanFiles(SfileName0, _result);
+			string loclog1 = " \n";
+			loclog1 += " SCANNING " + foldername + " \n" + ani->scanFiles(SfileName0, _result);
 			Log1(loclog1);
 
 			return _result;
@@ -510,6 +515,9 @@ struct folderMap {
 	vector<vector<int>> typeParams;
 	vector<subMap> subMaps;
 	
+	bool aParamCheck(int scanned, int real) {
+		if (scanned == real || scanned == -1) return true; else return false;
+	}
 
 	bool getParams(aniMap ani, string folder) {
 		const auto then = chrono::system_clock::now();
@@ -591,15 +599,15 @@ struct folderMap {
 		string loclog;
 		for (auto param : typeParams) {
 			//Log1(" TARGET param: [ " + to_string(weaponData[0]) + " " + to_string(weaponData[1]) + " " + to_string(weaponData[2]) + " " + to_string(weaponData[3]) + "] ");
-			if (param[0] == weaponData[0] && param[2] == weaponData[2] && param[3] == weaponData[3]) {
+			if (aParamCheck(param[0], weaponData[0]) && aParamCheck(param[2], weaponData[2]) && aParamCheck(param[3], weaponData[3])) {
 				matchMap["matched"] = param;
 				//Log1(" Matched param: [ " + to_string(param[0]) + " " + to_string(param[1]) + " " + to_string(param[2]) + " " + to_string(param[3]) + "] ");
 			}
-			else if (param[0] == weaponData[0] && param[2] == weaponData[2]) {
+			else if (aParamCheck(param[0], weaponData[0]) && aParamCheck(param[2], weaponData[2])) {
 				matchMap["reload"].push_back(param[3]);
 				//Log1(" Reload matched, attack: [ " + to_string(param[3]) + "] ");
 			}
-			else if (param[0] == weaponData[0] && param[3] == weaponData[3]) {
+			else if (aParamCheck(param[0], weaponData[0]) && aParamCheck(param[3], weaponData[3])) {
 				matchMap["attack"].push_back(param[2]);
 				//Log1(" Attack matched, reload: [ " + to_string(param[2])  + "] ");
 			}
