@@ -336,6 +336,8 @@ struct weaponsBank {
 
 struct typesBank {
 	map <string, vector<string>> weapType;
+	map <string, map<string, string>> weapCondi; // mod ID, <Folder name, Condition>
+	map <string, map<string, string>> weapProps; // mod ID, <Folder name, Properties>
 	map<string, vector<int>> typesMap;
 	vector<string> typesMap1;
 	vector<vector<int>> typesMap2;

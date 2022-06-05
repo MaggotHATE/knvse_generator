@@ -368,7 +368,7 @@ bool Cmd_knvse_generatelist_Execute(COMMAND_ARGS)
 }
 #endif
 
-DEFINE_COMMAND_PLUGIN(knvse_generatelist, "Generates types file for a folder", 0, 2, kParams_OneString_OneOptionalString)
+DEFINE_COMMAND_PLUGIN(knvse_generatelist, "Generates weapons file for a folder", 0, 2, kParams_OneString_OneOptionalString)
 
 
 bool NVSEPlugin_Query(const NVSEInterface* nvse, PluginInfo* info)

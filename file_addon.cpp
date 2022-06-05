@@ -81,6 +81,11 @@ bool checkName(string name, vector<string> excludes) {
 	return true;
 }
 
+int findString(string base, string search) {
+	auto pos = base.find(search);
+	if (pos != base.npos) return pos; else return 999;
+}
+
 const auto GetHasType2 (vector<int>& weapParams, vector<int>& typesData) // -1 is "any" for better flexibility
 {
 	if (
@@ -160,6 +165,7 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 							const auto& modExclude = elem.contains("exclude") ? &elem["exclude"] : nullptr;
 							const auto& options = elem.contains("options") ? &elem["options"] : nullptr;
 							const auto& mod = elem.contains("mod") ? elem["mod"].get<string>() : "";
+							//const auto& condition = elem.contains("condition") ? elem["condition"].get<string>() : "";
 							//Log1("Defining types");
 							if (typeData && folderType != "" && (typesfilename == "_" || SfileName == typesfilename)) { // defining types
 								if (!typeData->is_array())
@@ -190,18 +196,50 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 							if (types && (weapsfilename == "_" || SfileName == weapsfilename)) { // reading applied types
 
 								if (!types->is_array())
-								{
+								{									
 									continue;
 								}
 								else {
-									if (mod == "") {
-										ranges::transform(*types, back_inserter(typesDB.weapType["GLOBAL"]), [&](auto& i) {return i.template get<string>(); });
-										Log1("reading applied types for GLOBAL: " + typesDB.weapType["GLOBAL"].back());
+									string modChecked = mod;
+									if (modChecked == "") {
+										//ranges::transform(*types, back_inserter(typesDB.weapType["GLOBAL"]), [&](auto& i) {return i.template get<string>(); });
+										//Log1("reading applied types for GLOBAL: " + typesDB.weapType["GLOBAL"].back());
+										modChecked = "GLOBAL";
 									}
-									else {
-										ranges::transform(*types, back_inserter(typesDB.weapType[mod]), [&](auto& i) {return i.template get<string>(); });
-										Log1("reading applied types for " + mod + ": " + typesDB.weapType[mod].back());
-									}
+									//else {
+									string logloc = "Reading inside: \n";
+									ranges::transform(*types, back_inserter(typesDB.weapType[modChecked]), [&](auto& i) {
+										string iString = i.template get<string>();
+										int condiPos = findString(iString, "+conditions");
+										int propPos = findString(iString, "+properties");
+
+										if (condiPos == 999 && propPos == 999) {
+											logloc += ("\n Pure folder name: "+ iString);
+											return iString;
+										}
+										else {
+											string iStringName;
+											string iStringData;
+											logloc += ("\n Conditioned/propertied folder name: " + iString);
+											if (condiPos < propPos) { 
+												iStringName = iString.substr(0, condiPos);
+												iStringData = iString.substr(condiPos);
+											}
+											else {
+												iStringName = iString.substr(0, propPos);
+												iStringData = iString.substr(propPos);
+											}
+											logloc +=("\n Conditions/properties: " + iStringData);
+											if (condiPos != 999);
+											if (propPos != 999);
+
+											return iStringName;
+										}
+											
+										} );
+									Log1("reading applied types for " + modChecked + ": " + typesDB.weapType[modChecked].back());
+									Log1(logloc);
+									//}
 								}
 							}
 
