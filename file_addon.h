@@ -330,7 +330,11 @@ struct subMap {
 
 
 struct weaponsBank {
-	map<int, map<string, string>> formAndFolder;
+	map<int, map<string, string>> formAndFolder; // mod ID, <weapon hexed, folder>
+	map<int, map<string, vector<string>>> formAndFoldersWCondi; // mod id, <weapon hexed, <folder, condition>>
+
+	map<string, string> folderAndCondi; // <folder, condition>
+
 	map<string, vector<int>> unassigned;
 };
 
@@ -350,8 +354,8 @@ struct typesBank {
 		if (!weapType[fileModName].empty()) {
 			return (find(weapType[fileModName].begin(), weapType[fileModName].end(), type) != weapType[fileModName].end());
 		}
-		else if(!weapType["GLOBAL"].empty()) {
-			return (find(weapType["GLOBAL"].begin(), weapType["GLOBAL"].end(), type) != weapType["GLOBAL"].end());
+		else if(!weapType["FF"].empty()) {
+			return (find(weapType["FF"].begin(), weapType["FF"].end(), type) != weapType["FF"].end());
 		}
 		else Log1(" No defines for " + fileModName);
 	}
@@ -379,6 +383,8 @@ struct weaponType {
 	string hexedID;
 	vector<int> typeParams;
 	string typeFolder;
+
+	string log1;
 
 	bool isThisType(vector<int>& typesData) // -1 is "any" for better flexibility
 	{
@@ -420,7 +426,7 @@ struct weaponType {
 			}
 		}
 		else {
-			for (auto type : definedTypes.weapType["GLOBAL"]) {
+			for (auto type : definedTypes.weapType["FF"]) {
 				Log1(" Checking global type " + type);
 				if (definedTypes.hasFolder(type) == true) {
 					if (isThisType(definedTypes.typesMap[type])) {
@@ -435,7 +441,7 @@ struct weaponType {
 	vector<string> checkFolders2(typesBank& definedTypes)
 	{
 		vector<string> matching;
-		vector<string>& weaptype = (!definedTypes.weapType[fileModName].empty()) ? definedTypes.weapType[fileModName] : definedTypes.weapType["GLOBAL"];
+		vector<string>& weaptype = (!definedTypes.weapType[fileModName].empty()) ? definedTypes.weapType[fileModName] : definedTypes.weapType["FF"];
 
 		for ( auto type : weaptype) {
 			Log1(" Checking type " + type);
@@ -486,7 +492,7 @@ struct weaponType {
 		vector<string> matching;
 
 		Log1(" Checking types if file: " + filename);
-		vector<string>& weaptype = (!definedTypes.weapType[fileModName].empty()) ? definedTypes.weapType[fileModName] : definedTypes.weapType["GLOBAL"];
+		vector<string>& weaptype = (!definedTypes.weapType[fileModName].empty()) ? definedTypes.weapType[fileModName] : definedTypes.weapType["FF"];
 
 		for (auto type : weaptype) {
 			if (filesystem::exists(GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\_Types\)" + filename))

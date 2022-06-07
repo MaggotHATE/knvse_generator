@@ -131,6 +131,21 @@ TESObjectWEAP* Actor::GetWeaponForm() const
 }
 
 typesBank readTypes(vector<int> params, string typesfilename, string weapsfilename) {
+	auto hasIt = [](string input, string check) {
+		int posIt = input.find(check);
+		if (posIt != input.npos) return posIt; else return -1;
+	};
+	auto hasItAll = [](string input, string check) {
+		int posIt = input.find(check);
+		string result = "";
+		if (posIt != input.npos) {
+			int openBracket = input.find("[");
+			int closeBracket = input.find("]");
+			result = input.substr(openBracket + 1, closeBracket - openBracket - 1);
+		}
+
+		return result;
+	};
 	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\_Types)";
 	typesBank typesDB;
 	if (filesystem::exists(dir))
@@ -204,13 +219,13 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 									if (modChecked == "") {
 										//ranges::transform(*types, back_inserter(typesDB.weapType["GLOBAL"]), [&](auto& i) {return i.template get<string>(); });
 										//Log1("reading applied types for GLOBAL: " + typesDB.weapType["GLOBAL"].back());
-										modChecked = "GLOBAL";
+										modChecked = "FF";
 									}
 									//else {
 									string logloc = "Reading inside: \n";
 									ranges::transform(*types, back_inserter(typesDB.weapType[modChecked]), [&](auto& i) {
 										string iString = i.template get<string>();
-										int condiPos = findString(iString, "+conditions");
+										int condiPos = findString(iString, "+condition");
 										int propPos = findString(iString, "+properties");
 
 										if (condiPos == 999 && propPos == 999) {
@@ -220,18 +235,38 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 										else {
 											string iStringName;
 											string iStringData;
-											logloc += ("\n Conditioned/propertied folder name: " + iString);
-											if (condiPos < propPos) { 
-												iStringName = iString.substr(0, condiPos);
-												iStringData = iString.substr(condiPos);
+											string iStringDataCondi;
+											string iStringDataProp;
+											
+											//logloc += ("\n Conditioned/propertied folder name: " + iString);
+											int firstPlus = iString.find("+");
+											iStringName = iString.substr(0, firstPlus);
+											iStringData = iString.substr(firstPlus);
+											Log1("Separated into " + iStringName + " and " + iStringData + " \n");
+											int firstBracket = iStringData.find("[");
+											int lastBracket = iStringData.rfind("[");
+											int firstRBracket = iStringData.find("]");
+											int lastRBracket = iStringData.rfind("]");
+
+											Log1("Brackets found: " + to_string(firstBracket) + " , " + to_string(firstRBracket) + " , " + to_string(lastBracket) + " , " + to_string(lastRBracket) + " \n");
+
+											if (firstBracket != iStringData.npos && firstRBracket != iStringData.npos) {
+												string iStringDataFirst = iStringData.substr(0, firstRBracket + 1);
+												string iStringDataSecond = iStringData.substr(firstRBracket + 1);
+												Log1("Separated data into " + iStringDataFirst + " and " + iStringDataSecond + " \n");
+												iStringDataCondi = hasItAll(iStringDataFirst, "condition");
+												if (iStringDataCondi == "") iStringDataCondi = hasItAll(iStringDataSecond, "condition");
 											}
-											else {
-												iStringName = iString.substr(0, propPos);
-												iStringData = iString.substr(propPos);
+
+
+											if (iStringDataCondi != "") {
+												logloc += ("\n Conditions: " + iStringDataCondi);
+												//logloc +=("\n Properties: " + iStringDataProp);
+												typesDB.weapCondi[modChecked][iStringName] = iStringDataCondi;
+												//typesDB.weapProps[modChecked][iStringName] = iStringDataProp;
+												if (condiPos != 999);
+												if (propPos != 999);
 											}
-											logloc +=("\n Conditions/properties: " + iStringData);
-											if (condiPos != 999);
-											if (propPos != 999);
 
 											return iStringName;
 										}
@@ -353,10 +388,17 @@ weaponType getWeaponData1(TESObjectWEAP* weap) {
 	getweapon.typeParams.push_back(weap->handGrip); //Grip type
 	getweapon.typeParams.push_back(weap->reloadAnim); //Reload animation (non-modded)
 	getweapon.typeParams.push_back(weap->attackAnim); //Attack animation
-	Log1("Animation type: " + to_string(getweapon.typeParams[0]));
-	Log1("Grip type: " + to_string(getweapon.typeParams[1]));
-	Log1("Reload animation: " + to_string(getweapon.typeParams[2]));
-	Log1("Attack animation: " + to_string(getweapon.typeParams[3]));
+	//Log1("Animation type: " + to_string(getweapon.typeParams[0]));
+	//Log1("Grip type: " + to_string(getweapon.typeParams[1]));
+	//Log1("Reload animation: " + to_string(getweapon.typeParams[2]));
+	//Log1("Attack animation: " + to_string(getweapon.typeParams[3]));
+
+	getweapon.log1 += "\n";
+	getweapon.log1 += ("Animation type: " + to_string(getweapon.typeParams[0]));
+	getweapon.log1 += ("Grip type: " + to_string(getweapon.typeParams[1]));
+	getweapon.log1 += ("Reload animation: " + to_string(getweapon.typeParams[2]));
+	getweapon.log1 += ("Attack animation: " + to_string(getweapon.typeParams[3]));
+	getweapon.log1 += "\n";
 
 
 	return getweapon;
@@ -389,16 +431,28 @@ weaponsBank processTypesMod2(typesBank& definedType, string modID)
 					//	Log1("Checking a file: " + typesfilename);
 					//	matchFolders = weaponData.checkFoldersFile1(definedType, typesfilename);
 					//}
-					if (matchFolders.size() == 1) {
+					if (matchFolders.size() >= 1) {
 						weaponData.typeFolder = matchFolders[0];
 					}
-					else if (matchFolders.size() > 1) {
+					if (matchFolders.size() > 1) {
 						srand(time(NULL));
-						weaponData.typeFolder = matchFolders[rand() % matchFolders.size()];
+						for (auto folder : matchFolders){
+							if (definedType.weapCondi[modID].find(folder) != definedType.weapCondi[modID].end()) {
+								weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(folder);
+								weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(definedType.weapCondi[modID][folder]);
+
+								Log1("Condition Found: " + definedType.weapCondi[modID][folder] + " for "+ folder);
+							}
+							else if (rand()% 100 < 50){
+								weaponData.typeFolder = folder;
+							}
+						}
 					}
 					if (weaponData.typeFolder != "") {
+						Log1(weaponData.log1);
 						Log1("Replacing animations with " + weaponData.typeFolder + " for " + weaponData.name + "; refID " + weaponData.hexedID + "; mod ID " + FormatString(R"(%X)", weaponData.modIDXshort));
 						weapBank.formAndFolder[currentIDX][weaponData.hexedID] = weaponData.typeFolder;
+						//Log1("Looking for conditions in " + modID);
 					}
 					else {
 						weapBank.unassigned[weaponData.hexedID] = weaponData.typeParams;
@@ -732,20 +786,67 @@ bool writeJson(weaponsBank& weaponsDB, string prefix, string modIDX, int reverse
 				string fileModName = FormatString("%s", DataHandler::Get()->GetNthModName(formfolder.first));
 				//if (EXCLUDE.find(fileModName) == string::npos) {
 				map<string, json> arrayWeaponsDB;
+				map<int,string> separate;
 				Log1("Writing to: " + fileModName);
 
 				for (auto formfolderPair : formfolder.second)
 				{
 					json subMod = json::object();
 					//arrayWeaponsDB[formfolderPair.second] = json::array();
-					Log1(FormatString("Registered2 form %X, mod ID %d", formfolderPair.first, formfolder.first) + ": " + fileModName + ": " + formfolderPair.second);
+					Log1("Registered2 form " + formfolderPair.first+ ", mod ID " + modIDX + ": " + fileModName + ": " + formfolderPair.second);
 
 					///write to json here
 					subMod["mod"] = fileModName;
 					subMod["form"] = formfolderPair.first;
 					subMod["folder"] = formfolderPair.second;
+
 					arrayWeaponsDB[formfolderPair.second].push_back(subMod);
+
+					//conditioned folders additively
+					if (weaponsDB.formAndFoldersWCondi[formfolder.first].count(formfolderPair.first) == 1) {
+						for (int i = 0; i < weaponsDB.formAndFoldersWCondi[formfolder.first][formfolderPair.first].size(); i = i + 2)
+						{
+							//json subMod = json::object();
+							Log1("Checking conditioned from " + weaponsDB.formAndFoldersWCondi[formfolder.first][formfolderPair.first].size());
+
+							Log1("Registered3 form " + formfolderPair.first + ", number " + to_string(i) + ": " + fileModName + ": " + weaponsDB.formAndFoldersWCondi[formfolder.first][formfolderPair.first][i]);
+
+							///write to json here
+							subMod["mod"] = fileModName;
+							subMod["form"] = formfolderPair.first;
+							subMod["folder"] = weaponsDB.formAndFoldersWCondi[formfolder.first][formfolderPair.first][i];
+							subMod["condition"] = weaponsDB.formAndFoldersWCondi[formfolder.first][formfolderPair.first][i + 1];
+
+							arrayWeaponsDB[formfolderPair.second].push_back(subMod);
+						}
+					}
+
+					//arrayWeaponsDB[formfolderPair.second].push_back(subMod);
+
+					
+
 				}
+				//conditioned folders separately
+				for (auto formCondifolderPair : weaponsDB.formAndFoldersWCondi[formfolder.first])
+				{
+					//json subMod = json::object();
+					Log1("\n Checking conditioned from " + formCondifolderPair.second.size());
+					//arrayWeaponsDB[formfolderPair.second] = json::array();
+					for (int i = 0; i < formCondifolderPair.second.size(); i = i + 2) {
+						if (separate.count(i) == 1) {
+							Log1(FormatString("Registered4 form %d, number ", formCondifolderPair.first) + to_string(i) + ": " + fileModName + ": " + formCondifolderPair.second[i]);
+							json subMod = json::object();
+							///write to json here
+							subMod["mod"] = fileModName;
+							subMod["form"] = formCondifolderPair.first;
+							subMod["folder"] = formCondifolderPair.second[i];
+							subMod["condition"] = formCondifolderPair.second[i + 1];
+
+							arrayWeaponsDB[formCondifolderPair.second[i]].push_back(subMod);
+						}
+					}
+				}
+
 				for (auto jsonarray : arrayWeaponsDB) {
 					if (reversed == 0) {
 						Log1("Writing into: _" + fileModName + "_" + jsonarray.first + ".json");
@@ -772,13 +873,31 @@ bool writeJson(weaponsBank& weaponsDB, string prefix, string modIDX, int reverse
 			{
 				json subMod = json::object();
 				//arrayWeaponsDB[formfolderPair.second] = json::array();
-				Log1(FormatString("Registered2 form %X, mod ID %d", formfolderPair.first, modIDXdec) + ": " + fileModName + ": " + formfolderPair.second);
+				Log1(FormatString("Registered5 form %X, mod ID %d", formfolderPair.first, modIDXdec) + ": " + fileModName + ": " + formfolderPair.second);
 
 				///write to json here
 				subMod["mod"] = fileModName;
 				subMod["form"] = formfolderPair.first;
 				subMod["folder"] = formfolderPair.second;
+
 				arrayWeaponsDB[formfolderPair.second].push_back(subMod);
+			}
+
+			for (auto formCondifolderPair : weaponsDB.formAndFoldersWCondi[modIDXdec])
+			{
+				json subMod = json::object();
+				//arrayWeaponsDB[formfolderPair.second] = json::array();
+				for (int i = 0; i < formCondifolderPair.second.size(); i = i + 2) {
+					Log1(FormatString("Registered6 form %X, mod ID %d", formCondifolderPair.first, modIDXdec) + ": " + fileModName + ": " + formCondifolderPair.second[i]);
+
+					///write to json here
+					subMod["mod"] = fileModName;
+					subMod["form"] = formCondifolderPair.first;
+					subMod["folder"] = formCondifolderPair.second[i];
+					subMod["condition"] = formCondifolderPair.second[i + 1];
+
+					arrayWeaponsDB[formCondifolderPair.second[i]].push_back(subMod);
+				}
 			}
 			for (auto jsonarray : arrayWeaponsDB) {
 				//string fileModName1 = regex_replace(fileModName, regexp, "_");
@@ -869,7 +988,7 @@ bool processTypesAndWrite2(string prefix, string modIDX, int eWeaponType, int ha
 		return false;
 	}
 	else if (modIDX == "FF") {
-		Log1("Starting GLOBAL");
+		Log1("Starting FF");
 		//weaponsBank weaps = processTypesMod1(mods.second, typesDB.typesMap, typesDB.excluded, modIDX);
 		weaponsBank weaps = processTypesMod2(typesDB, modIDX);
 		writeJson(weaps, prefix, modIDX, reversed);
