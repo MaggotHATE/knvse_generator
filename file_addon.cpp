@@ -256,6 +256,9 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 												Log1("Separated data into " + iStringDataFirst + " and " + iStringDataSecond + " \n");
 												iStringDataCondi = hasItAll(iStringDataFirst, "condition");
 												if (iStringDataCondi == "") iStringDataCondi = hasItAll(iStringDataSecond, "condition");
+												// parsing properties
+												iStringDataProp = hasItAll(iStringDataFirst, "properties");
+												if (iStringDataProp == "") iStringDataProp = hasItAll(iStringDataSecond, "properties");
 											}
 
 
@@ -264,9 +267,14 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 												//logloc +=("\n Properties: " + iStringDataProp);
 												typesDB.weapCondi[modChecked][iStringName] = iStringDataCondi;
 												//typesDB.weapProps[modChecked][iStringName] = iStringDataProp;
-												if (condiPos != 999);
-												if (propPos != 999);
+												//if (condiPos != 999);
+												//if (propPos != 999);
 											}
+											if (iStringDataProp != "") {
+												logloc +=("\n Properties: " + iStringDataProp);
+												typesDB.weapProps[modChecked][iStringName] = iStringDataProp;
+											}
+
 
 											return iStringName;
 										}
@@ -404,6 +412,84 @@ weaponType getWeaponData1(TESObjectWEAP* weap) {
 	return getweapon;
 }
 
+bool getWeaponProp(TESObjectWEAP* weap, string property) {
+
+	//Log1("Weapon data for " + getweapon.name + "(" + getweapon.hexedID + ")" + " : mod ID " + FormatString(R"(%X)", getweapon.modIDX) + " = " + getweapon.fileModName);
+
+	//getweapon.typeParams.push_back(weap->eWeaponType); //Animation type
+	//getweapon.typeParams.push_back(weap->handGrip); //Grip type
+	//getweapon.typeParams.push_back(weap->reloadAnim); //Reload animation (non-modded)
+	//getweapon.typeParams.push_back(weap->attackAnim); //Attack animation
+	//Log1("Animation type: " + to_string(getweapon.typeParams[0]));
+	//Log1("Grip type: " + to_string(getweapon.typeParams[1]));
+	//Log1("Reload animation: " + to_string(getweapon.typeParams[2]));
+	//Log1("Attack animation: " + to_string(getweapon.typeParams[3]));
+	bool result = false;
+	const char *str = property.c_str();
+	float weapoProp = -999;
+	int propPos;
+	Log1("\n Result starts: " + to_string(result));
+	switch (*str) {
+	case 'a': 
+		propPos = property.find("attackDmg");
+		if (propPos != property.npos) {
+			weapoProp = weap->attackDmg.GetDamage();
+			Log1("\n Found attackDmg of " + to_string(weapoProp));
+		}
+		break;
+	case 'c':
+		propPos = property.find("clipRounds");
+		if (propPos != property.npos) {
+			weapoProp = weap->clipRounds.clipRounds;
+			Log1("\n Found clipRounds of " + to_string(weapoProp));
+		}
+		break;
+	case 'w':
+		propPos = property.find("weight");
+		if (propPos != property.npos) {
+			weapoProp = weap->weight.weight;
+			Log1("\n Found weight of " + to_string(weapoProp));
+		}
+	}
+	
+	if (weapoProp != -999) {
+		//Log1("\n Found a weapon property of " + to_string(weapoProp));
+		float propVal;
+		string operAndNum = property.substr(propPos);
+		Log1("\n Found a property operand with a number: "+ operAndNum);
+		int eqPos = operAndNum.find("=");
+		int morePos = operAndNum.find(">");
+		int lessPos = operAndNum.find("<");
+		if (eqPos != operAndNum.npos) {
+			string num = operAndNum.substr(eqPos + 1);
+			Log1("\n Found a property number with =: " + num);
+			propVal = stoi(num);
+			Log1("\n Found a value: " + to_string(propVal));
+			if (lessPos == operAndNum.npos && lessPos == operAndNum.npos) result = propVal == weapoProp;
+			else if (lessPos != operAndNum.npos) result = weapoProp <= propVal;
+			else result = weapoProp >= propVal;
+		}
+		else if (lessPos != operAndNum.npos) {
+			string num = operAndNum.substr(lessPos + 1);
+			Log1("\n Found a property number with <: " + num);
+			propVal = stoi(num);Log1("\n Result is: " + to_string(result));
+			
+			result = weapoProp < propVal;
+			Log1("\n Result is: " + to_string(result));
+
+		}
+		else { 
+			string num = operAndNum.substr(morePos + 1);
+			Log1("\n Found a property number with >: " + num);
+			propVal = stoi(num);
+			
+			result = weapoProp > propVal;
+			Log1("\n Result is: " + to_string(result));
+		}
+	}
+	return result;
+}
+
 weaponsBank processTypesMod2(typesBank& definedType, string modID)
 {
 	weaponsBank weapBank;
@@ -432,22 +518,26 @@ weaponsBank processTypesMod2(typesBank& definedType, string modID)
 					//	matchFolders = weaponData.checkFoldersFile1(definedType, typesfilename);
 					//}
 					if (matchFolders.size() >= 1) {
-						weaponData.typeFolder = matchFolders[0];
+						if (definedType.weapProps[modID].find(matchFolders[0]) == definedType.weapProps[modID].end() || getWeaponProp(weap, definedType.weapProps[modID][matchFolders[0]]) == true) weaponData.typeFolder = matchFolders[0];
 					}
 					if (matchFolders.size() > 1) {
 						srand(time(NULL));
 						for (auto folder : matchFolders){
-							if (definedType.weapCondi[modID].find(folder) != definedType.weapCondi[modID].end()) {
-								weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(folder);
-								weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(definedType.weapCondi[modID][folder]);
+							if (definedType.weapProps[modID].find(folder) == definedType.weapProps[modID].end() || getWeaponProp(weap, definedType.weapProps[modID][folder]) == true) {
 
-								Log1("Condition Found: " + definedType.weapCondi[modID][folder] + " for "+ folder);
-							}
-							else if (rand()% 100 < 50){
-								weaponData.typeFolder = folder;
+								if (definedType.weapCondi[modID].find(folder) != definedType.weapCondi[modID].end()) {
+									weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(folder);
+									weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(definedType.weapCondi[modID][folder]);
+
+									Log1("Condition Found: " + definedType.weapCondi[modID][folder] + " for " + folder);
+								}
+								else if (rand() % 100 < 50) {
+									weaponData.typeFolder = folder;
+								}
 							}
 						}
 					}
+					
 					if (weaponData.typeFolder != "") {
 						Log1(weaponData.log1);
 						Log1("Replacing animations with " + weaponData.typeFolder + " for " + weaponData.name + "; refID " + weaponData.hexedID + "; mod ID " + FormatString(R"(%X)", weaponData.modIDXshort));
