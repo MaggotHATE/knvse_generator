@@ -444,6 +444,25 @@ bool getWeaponProp(TESObjectWEAP* weap, string property) {
 			Log1("\n Found clipRounds of " + to_string(weapoProp));
 		}
 		break;
+	case 's':
+		propPos = property.find("skillRequirement");
+		if (propPos != property.npos) {
+			weapoProp = weap->skillRequirement;
+			Log1("\n Found skillRequirement of " + to_string(weapoProp));
+			break;
+		}	else propPos = property.find("strRequired");
+			
+		if (propPos != property.npos) {
+			weapoProp = weap->strRequired;
+			Log1("\n Found strRequired of " + to_string(weapoProp));
+			break;
+		} else propPos = property.find("soundLevel");
+
+		if (propPos != property.npos) {
+			weapoProp = weap->soundLevel;
+			Log1("\n Found soundLevel of " + to_string(weapoProp));
+			break;
+		} else break;
 	case 'w':
 		propPos = property.find("weight");
 		if (propPos != property.npos) {
@@ -462,12 +481,22 @@ bool getWeaponProp(TESObjectWEAP* weap, string property) {
 		int lessPos = operAndNum.find("<");
 		if (eqPos != operAndNum.npos) {
 			string num = operAndNum.substr(eqPos + 1);
-			Log1("\n Found a property number with =: " + num);
+			Log1("\n Found a property number with =: " + num + " with a " + ( (lessPos == operAndNum.npos)? ">" : "<" ) );
 			propVal = stoi(num);
 			Log1("\n Found a value: " + to_string(propVal));
-			if (lessPos == operAndNum.npos && lessPos == operAndNum.npos) result = propVal == weapoProp;
-			else if (lessPos != operAndNum.npos) result = weapoProp <= propVal;
-			else result = weapoProp >= propVal;
+			if (lessPos == operAndNum.npos && morePos == operAndNum.npos) {
+				result = propVal == weapoProp;
+				Log1("\n Result = is: " + to_string(result));
+			}
+			else if (lessPos != operAndNum.npos) {
+				result = (weapoProp <= propVal);
+				Log1("\n Result <= is: " + to_string(result));
+			}
+			else {
+				result = (weapoProp >= propVal);
+				Log1("\n Result >= is: " + to_string(result));
+			}
+			
 		}
 		else if (lessPos != operAndNum.npos) {
 			string num = operAndNum.substr(lessPos + 1);
