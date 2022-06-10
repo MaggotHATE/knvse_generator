@@ -645,6 +645,7 @@ bool processTypesAndWrite2(string prefix, string modIDX = "FF", int eWeaponType 
 
 typesBank readTypes(vector<int> params, string typesfilename = "_", string weapsfilename = "_");
 weaponsBank processTypesMod2(typesBank& definedType, string modID);
+bool readAutoTypes(string typesfilename);
 weaponType getWeaponData1(TESObjectWEAP* weap);
 vector<string> matchAWeapon(TESObjectWEAP* weap);
 vector<string> matchAWeapon1(weaponType& weaps, vector<int> params = {});

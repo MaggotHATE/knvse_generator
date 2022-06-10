@@ -141,6 +141,29 @@ bool Cmd_knvse_generate_Execute(COMMAND_ARGS)
 DEFINE_COMMAND_PLUGIN(knvse_generate, "Generates .json files for all the weapons that fit into types - with parameters.", 0, 9, kParams_OneString_ThreeOptionalStringsFiveOptionalInts)
 /// prefix, mod ID (hex), first folder (usually types), second folder (usually weapons), 4 weapon parameters, reversed or not (priority over options in .json) 
 
+bool Cmd_knvse_auto_Execute(COMMAND_ARGS);
+
+#if RUNTIME
+//In here we define a script function
+//Script functions must always follow the Cmd_FunctionName_Execute naming convention
+bool Cmd_knvse_auto_Execute(COMMAND_ARGS)
+{
+	_MESSAGE("Generating files");
+
+	char typesfilename[0x1000] = "_";
+
+	if (ExtractArgs(EXTRACT_ARGS, &typesfilename))
+	{
+		readAutoTypes(typesfilename);
+	}
+
+	return true;
+}
+#endif
+
+DEFINE_COMMAND_PLUGIN(knvse_auto, "AUTOMATICALLY Generates .json files for all the weapons that fit into types - with parameters.", 0, 1, kParams_OneString)
+
+
 bool Cmd_knvse_getfolders_Execute(COMMAND_ARGS);
 
 #if RUNTIME
@@ -453,6 +476,7 @@ bool NVSEPlugin_Load(const NVSEInterface* nvse)
 	nvse->SetOpcodeBase(0x3DDD);
 	//RegisterScriptCommand(knvse_typegen);
 	RegisterScriptCommand(knvse_generate);
+	RegisterScriptCommand(knvse_auto);
 	RegisterScriptCommand(knvse_getfolders);
 	RegisterScriptCommand(knvse_generateone);
 	RegisterScriptCommand(knvse_scan);

@@ -155,7 +155,7 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 			const auto& path = iter->path();
 			const auto& fileName = path.filename();
 			const auto& SfileName = fileName.string();
-			if (_stricmp(path.extension().string().c_str(), ".json") == 0)
+			if (_stricmp(path.extension().string().c_str(), ".json") == 0 && (SfileName.find("autogen")!= 0))
 			{
 				Log1("\nReading Types from JSON file " + SfileName);
 				if (!params.empty()) Log1("\nParams given " + to_string(params[0]));
@@ -333,6 +333,112 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 	return typesDB;
 }
 
+bool readAutoTypes(string typesfilename) {
+	if (typesfilename.find(".json") == typesfilename.npos) typesfilename += ".json";
+	auto hasIt = [](string input, string check) {
+		int posIt = input.find(check);
+		if (posIt != input.npos) return posIt; else return -1;
+	};
+	auto hasItAll = [](string input, string check) {
+		int posIt = input.find(check);
+		string result = "";
+		if (posIt != input.npos) {
+			int openBracket = input.find("[");
+			int closeBracket = input.find("]");
+			result = input.substr(openBracket + 1, closeBracket - openBracket - 1);
+		}
+
+		return result;
+	};
+	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride\_Types)";
+	string execPrefix;
+	string execID;
+	string execTypes;
+	string execWeaps;
+	vector<int> execParams;
+	int execReversed = 0;
+	if (filesystem::exists(dir))
+	{
+		for (filesystem::directory_iterator iter(dir.c_str()), end; iter != end; ++iter)
+		{
+			const auto& path = iter->path();
+			const auto& fileName = path.filename();
+			const auto& SfileName = fileName.string();
+			if (_stricmp(path.extension().string().c_str(), ".json") == 0 && (SfileName.find("autogen") == 0) && (SfileName == typesfilename))
+			{
+				Log1("\n Reading Autogen from JSON file " + SfileName);
+				Log1("\n Autogen file: " + typesfilename);
+				try
+				{
+					ifstream i(iter->path());
+					json j;
+					i >> j;
+					if (j.is_array())
+					{
+						for (auto& elem : j)
+						{
+							if (!elem.is_object())
+							{
+								Log1("JSON error: expected object with mod, form and folder fields");
+								continue;
+							}
+							
+							const auto& prefix = elem.contains("prefix") ? elem["prefix"].get<string>() : "";
+							const auto& modID = elem.contains("modID") ? elem["modID"].get<string>() : "";
+							const auto& typesFile = elem.contains("typesFile") ? elem["typesFile"].get<string>() : "";
+							const auto& weaponsFile = elem.contains("weaponsFile") ? elem["weaponsFile"].get<string>() : "";
+							auto typeData = elem.contains("typedata") ? &elem["typedata"] : nullptr;
+							const auto& reversed = elem.contains("reversed") ? elem["reversed"].get<string>() : "";
+							//const auto& condition = elem.contains("condition") ? elem["condition"].get<string>() : "";
+							//Log1("Defining types");
+							if (modID != "" && prefix != "" ) { // defining types
+								Log1("Reading: modID and prefix");
+								execPrefix = prefix;
+								execID = modID;
+								if (typesFile == "") execTypes = "_";
+								if (weaponsFile == "") execWeaps = "_";
+								if (reversed != "") execReversed = stoi(reversed);
+								if (typeData){
+									if (!typeData->is_array())
+									{
+										continue;
+									}
+									else {
+									
+										execParams[0] = typeData[0];
+										execParams[1] = typeData[1];
+										execParams[2] = typeData[2];
+										execParams[3] = typeData[3];
+										//vector<int> tempData;
+										//ranges::transform(*typeData, back_inserter(tempData), [&](auto& i) {return i; });
+										//typesDB.typesMap1[tempData] = folderType;
+										//for (auto& iter: typesDB.typesMap) {
+										//	Log1("Defining types " + iter.first);
+										//}
+									}
+								}
+								processTypesAndWrite2(execPrefix, execID, execParams[0], execParams[1], execParams[2], execParams[3], execReversed, typesFile, weaponsFile);
+							}
+						}
+					}
+					else
+						Log1(iter->path().string() + " does not start as a JSON array");
+				}
+				catch (json::exception& e)
+				{
+					Log1("The JSON is incorrectly formatted! It will not be applied.");
+					Log1(FormatString("JSON error: %s\n", e.what()));
+				}
+			}
+		}
+	}
+	else
+	{
+		Log1(dir + " does not exist.");
+	}
+	return true;
+}
+
 bool thatWeapon(TESObjectWEAP* weap, vector<int>& params){
 	if (params.empty() || (weap->eWeaponType == params[0] &&
 							weap->handGrip == params[1] &&
@@ -428,6 +534,7 @@ bool getWeaponProp(TESObjectWEAP* weap, string property) {
 	const char *str = property.c_str();
 	float weapoProp = -999;
 	int propPos;
+	string resultStr = "";
 	Log1("\n Result starts: " + to_string(result));
 	switch (*str) {
 	case 'a': 
@@ -435,13 +542,26 @@ bool getWeaponProp(TESObjectWEAP* weap, string property) {
 		if (propPos != property.npos) {
 			weapoProp = weap->attackDmg.GetDamage();
 			Log1("\n Found attackDmg of " + to_string(weapoProp));
-		}
-		break;
+			break;
+		} else propPos = property.find("ammo");
+		if (propPos != property.npos) {
+			resultStr = weap->ammo.ammo->GetName();
+			Log1("\n Found ammo of " + resultStr);
+			break;
+		} else break;
+		
 	case 'c':
 		propPos = property.find("clipRounds");
 		if (propPos != property.npos) {
 			weapoProp = weap->clipRounds.clipRounds;
 			Log1("\n Found clipRounds of " + to_string(weapoProp));
+		}
+		break;
+	case 'H':
+		propPos = property.find("HasScope");
+		if (propPos != property.npos) {
+			weapoProp = weap->HasScope();
+			Log1("\n Found HasScope of " + to_string(weapoProp));
 		}
 		break;
 	case 's':
@@ -471,7 +591,7 @@ bool getWeaponProp(TESObjectWEAP* weap, string property) {
 		}
 	}
 	
-	if (weapoProp != -999) {
+	if (weapoProp != -999 || resultStr != "") {
 		//Log1("\n Found a weapon property of " + to_string(weapoProp));
 		float propVal;
 		string operAndNum = property.substr(propPos);
@@ -480,31 +600,34 @@ bool getWeaponProp(TESObjectWEAP* weap, string property) {
 		int morePos = operAndNum.find(">");
 		int lessPos = operAndNum.find("<");
 		if (eqPos != operAndNum.npos) {
+			
 			string num = operAndNum.substr(eqPos + 1);
-			Log1("\n Found a property number with =: " + num + " with a " + ( (lessPos == operAndNum.npos)? ">" : "<" ) );
-			propVal = stoi(num);
-			Log1("\n Found a value: " + to_string(propVal));
-			if (lessPos == operAndNum.npos && morePos == operAndNum.npos) {
-				result = propVal == weapoProp;
-				Log1("\n Result = is: " + to_string(result));
-			}
-			else if (lessPos != operAndNum.npos) {
-				result = (weapoProp <= propVal);
-				Log1("\n Result <= is: " + to_string(result));
+			if (resultStr != "") {
+				Log1("\n Found a property name with =: " + num);
+				result = resultStr == num;
 			}
 			else {
-				result = (weapoProp >= propVal);
-				Log1("\n Result >= is: " + to_string(result));
+				Log1("\n Found a property number with =: " + num + " with a " + ((lessPos == operAndNum.npos) ? ">" : "<"));
+				propVal = stoi(num);
+				Log1("\n Found a value: " + to_string(propVal));
+				if (lessPos == operAndNum.npos && morePos == operAndNum.npos) {
+					result = propVal == weapoProp;
+				}
+				else if (lessPos != operAndNum.npos) {
+					result = (weapoProp <= propVal);
+				}
+				else {
+					result = (weapoProp >= propVal);
+				}
 			}
 			
 		}
-		else if (lessPos != operAndNum.npos) {
+		else if (lessPos != operAndNum.npos && resultStr == "") {
 			string num = operAndNum.substr(lessPos + 1);
 			Log1("\n Found a property number with <: " + num);
-			propVal = stoi(num);Log1("\n Result is: " + to_string(result));
+			propVal = stoi(num);
 			
 			result = weapoProp < propVal;
-			Log1("\n Result is: " + to_string(result));
 
 		}
 		else { 
@@ -513,9 +636,9 @@ bool getWeaponProp(TESObjectWEAP* weap, string property) {
 			propVal = stoi(num);
 			
 			result = weapoProp > propVal;
-			Log1("\n Result is: " + to_string(result));
 		}
 	}
+	Log1("\n Result is: " + to_string(result));
 	return result;
 }
 
