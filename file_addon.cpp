@@ -271,7 +271,7 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 												//if (propPos != 999);
 											}
 											if (iStringDataProp != "") {
-												logloc +=("\n Properties: " + iStringDataProp);
+												logloc +=("\n Properties: " + iStringName + " with " + iStringDataProp);
 												typesDB.weapProps[modChecked][iStringName] = iStringDataProp;
 											}
 
@@ -518,201 +518,256 @@ weaponType getWeaponData1(TESObjectWEAP* weap) {
 	return getweapon;
 }
 
-bool getWeaponProp(TESObjectWEAP* weap, string property) {
+/// outtake
+	//auto getStringNumAndOper = [](string input) {
+	//	string prop;
+	//	const char* oper;
+	//	map<const char*, float> result;
+	//	int eqPos = input.find("=");
+	//	int morePos = input.find(">");
+	//	int lessPos = input.find("<");
+	//	if (eqPos != input.npos) {
+	//		if (morePos == input.npos && lessPos == input.npos) {
+	//			result["="] = stoi(input.substr(eqPos + 1));
+	//		}
+	//		else result[(morePos != input.npos) ? ">=" : "<="] = stoi(input.substr(eqPos + 1));
+	//	}
+	//	else {
+	//		result[(morePos != input.npos) ? ">" : "<"] = (morePos != input.npos) ? stoi(input.substr(morePos + 1)) : stoi(input.substr(lessPos + 1));
+	//	}
 
-	bool result = false;
-	const char *str = property.c_str();
-	hash<string> strH;
-	float weapoProp = -999;
-	int propPos;
-	string resultStr = "";
-	Log1("\n Result starts: " + to_string(result));
-	switch (*str) {
-	case 'a': 
-		propPos = property.find("attackDmg");
-		if (propPos != property.npos) {
-			weapoProp = weap->attackDmg.GetDamage();
-			Log1("\n Found attackDmg of " + to_string(weapoProp));
-			break;
-		} 
-		
-		else propPos = property.find("ammo");
-		if (propPos != property.npos) {
-			resultStr = weap->ammo.ammo->GetName();
-			Log1("\n Found ammo of " + resultStr);
-			break;
-		}
+	//	return result, prop;
+	//};
+///
 
-		else propPos = property.find("ammoUse");
-		if (propPos != property.npos) {
-			weapoProp = weap->ammoUse;
-			Log1("\n Found ammoUse of " + to_string(weapoProp));
-			break;
-		}
+bool processOrProp(TESObjectWEAP* weap, string input) {
 
-		else propPos = property.find("animShotsPerSec");
-		if (propPos != property.npos) {
-			weapoProp = weap->animShotsPerSec;
-			Log1("\n Found animShotsPerSec of " + to_string(weapoProp));
-			break;
-		}
-		
-		else propPos = property.find("animReloadTime");
-		if (propPos != property.npos) {
-			weapoProp = weap->animReloadTime;
-			Log1("\n Found animReloadTime of " + to_string(weapoProp));
-			break;
-		} else break;
-		
-	case 'c':
-		propPos = property.find("clipRounds");
-		if (propPos != property.npos) {
-			weapoProp = weap->clipRounds.clipRounds;
-			Log1("\n Found clipRounds of " + to_string(weapoProp));
-		}
-		break;
-	case 'f':
-		propPos = property.find("fireRate");
-		if (propPos != property.npos) {
-			weapoProp = weap->fireRate;
-			Log1("\n Found fireRate of " + to_string(weapoProp));
-		}
-		break;
-	case 'h':
-		propPos = property.find("health");
-		if (propPos != property.npos) {
-			weapoProp = weap->health.health;
-			Log1("\n Found health of " + to_string(weapoProp));
-			break;
-		}		
-	case 'H':
-		propPos = property.find("HasScope");
-		if (propPos != property.npos) {
-			weapoProp = weap->HasScope();
-			Log1("\n Found HasScope of " + to_string(weapoProp));
-			break;
-		}
-		else propPos = property.find("HasItemModEffect");
-		if (propPos != property.npos) {
-			for (int i = 1; i < 3; i++ ) resultStr += ":" + to_string(weap->GetItemModEffect(i)) + ":";
-			Log1("\n Found HasItemModEffect of " + resultStr);
-			break;
-		}
-		else break;
-	case 'I':
-		propPos = property.find("IsNonPlayable");
-		if (propPos != property.npos) {
-			weapoProp = weap->IsNonPlayable();
-			Log1("\n Found IsNonPlayable of " + to_string(weapoProp));
-		}
-		break;
-	case 'n':
-		propPos = property.find("numProjectiles");
-		if (propPos != property.npos) {
-			weapoProp = weap->numProjectiles;
-			Log1("\n Found numProjectiles of " + to_string(weapoProp));
-		}
-		break;
-	case 's':
-		propPos = property.find("skillRequirement");
-		if (propPos != property.npos) {
-			weapoProp = weap->skillRequirement;
-			Log1("\n Found skillRequirement of " + to_string(weapoProp));
-			break;
-		}	
-
-
-		else propPos = property.find("strRequired");
-		if (propPos != property.npos) {
-			weapoProp = weap->strRequired;
-			Log1("\n Found strRequired of " + to_string(weapoProp));
-			break;
-		} 
-		
-		else propPos = property.find("sightUsage");
-		if (propPos != property.npos) {
-			weapoProp = weap->sightUsage;
-			Log1("\n Found sightUsage of " + to_string(weapoProp));
-			break;
-		}
-
-		else propPos = property.find("soundLevel");
-		if (propPos != property.npos) {
-			weapoProp = weap->soundLevel;
-			Log1("\n Found soundLevel of " + to_string(weapoProp));
-			break;
-		} else break;
-	case 'v':
-		propPos = property.find("value");
-		if (propPos != property.npos) {
-			weapoProp = weap->value.value;
-			Log1("\n Found value of " + to_string(weapoProp));
-		}
-		break;
-	case 'w':
-		propPos = property.find("weight");
-		if (propPos != property.npos) {
-			weapoProp = weap->weight.weight;
-			Log1("\n Found weight of " + to_string(weapoProp));
-			break;
-		}
-
-		else propPos = property.find("weaponSkill");
-		if (propPos != property.npos) {
-			weapoProp = weap->weaponSkill;
-			Log1("\n Found weaponSkill of " + to_string(weapoProp));
-		}
-	}
-	
-	if (weapoProp != -999 || resultStr != "") {
-		//Log1("\n Found a weapon property of " + to_string(weapoProp));
-		float propVal;
-		string operAndNum = property.substr(propPos);
-		Log1("\n Found a property operand with a number: "+ operAndNum);
-		int eqPos = operAndNum.find("=");
-		int morePos = operAndNum.find(">");
-		int lessPos = operAndNum.find("<");
-		if (eqPos != operAndNum.npos) {
-			
-			string num = operAndNum.substr(eqPos + 1);
-			if (resultStr != "") {
-				Log1("\n Found a property name with =: " + num);
-				if (resultStr.find(":") != resultStr.npos) result = (resultStr.find(":" + num + ":") != resultStr.npos);
-				else result = (resultStr.find(num) != resultStr.npos);
+	auto processAProp = [](TESObjectWEAP* weap, string input) {
+		bool result = false;
+		const char* str = input.c_str();
+		hash<string> strH;
+		float weapoProp = -999;
+		int propPos;
+		string resultStr = "";
+		//string prop;
+		//map<const char*, float> operVal;
+		//operVal, prop = getStringNumAndOper(input);
+		Log1("\n Result starts: " + to_string(result));
+		//const char* str = prop.c_str();
+		switch (*str) {
+		case 'a':
+			propPos = input.find("attackDmg");
+			if (propPos != input.npos) {
+				weapoProp = weap->attackDmg.GetDamage();
+				Log1("\n Found attackDmg of " + to_string(weapoProp));
+				break;
 			}
-			else {
-				Log1("\n Found a property number with =: " + num + " with a " + ((lessPos == operAndNum.npos) ? ">" : "<"));
-				propVal = stoi(num);
-				Log1("\n Found a value: " + to_string(propVal));
-				if (lessPos == operAndNum.npos && morePos == operAndNum.npos) {
-					result = propVal == weapoProp;
-				}
-				else if (lessPos != operAndNum.npos) {
-					result = (weapoProp <= propVal);
+
+			else propPos = input.find("ammo");
+			if (propPos != input.npos) {
+				resultStr = weap->ammo.ammo->GetName();
+				Log1("\n Found ammo of " + resultStr);
+				break;
+			}
+
+			else propPos = input.find("ammoUse");
+			if (propPos != input.npos) {
+				weapoProp = weap->ammoUse;
+				Log1("\n Found ammoUse of " + to_string(weapoProp));
+				break;
+			}
+
+			else propPos = input.find("animShotsPerSec");
+			if (propPos != input.npos) {
+				weapoProp = weap->animShotsPerSec;
+				Log1("\n Found animShotsPerSec of " + to_string(weapoProp));
+				break;
+			}
+
+			else propPos = input.find("animReloadTime");
+			if (propPos != input.npos) {
+				weapoProp = weap->animReloadTime;
+				Log1("\n Found animReloadTime of " + to_string(weapoProp));
+				break;
+			}
+			else break;
+
+		case 'c':
+			propPos = input.find("clipRounds");
+			if (propPos != input.npos) {
+				weapoProp = weap->clipRounds.clipRounds;
+				Log1("\n Found clipRounds of " + to_string(weapoProp));
+			}
+			break;
+		case 'f':
+			propPos = input.find("fireRate");
+			if (propPos != input.npos) {
+				weapoProp = weap->fireRate;
+				Log1("\n Found fireRate of " + to_string(weapoProp));
+			}
+			break;
+		case 'h':
+			propPos = input.find("health");
+			if (propPos != input.npos) {
+				weapoProp = weap->health.health;
+				Log1("\n Found health of " + to_string(weapoProp));
+				break;
+			}
+		case 'H':
+			propPos = input.find("HasScope");
+			if (propPos != input.npos) {
+				weapoProp = weap->HasScope();
+				Log1("\n Found HasScope of " + to_string(weapoProp));
+				break;
+			}
+			else propPos = input.find("HasItemModEffect");
+			if (propPos != input.npos) {
+				for (int i = 1; i < 3; i++) resultStr += ":" + to_string(weap->GetItemModEffect(i)) + ":";
+				Log1("\n Found HasItemModEffect of " + resultStr);
+				break;
+			}
+			else break;
+		case 'I':
+			propPos = input.find("IsNonPlayable");
+			if (propPos != input.npos) {
+				weapoProp = weap->IsNonPlayable();
+				Log1("\n Found IsNonPlayable of " + to_string(weapoProp));
+			}
+			break;
+		case 'n':
+			propPos = input.find("numProjectiles");
+			if (propPos != input.npos) {
+				weapoProp = weap->numProjectiles;
+				Log1("\n Found numProjectiles of " + to_string(weapoProp));
+			}
+			break;
+		case 's':
+			propPos = input.find("skillRequirement");
+			if (propPos != input.npos) {
+				weapoProp = weap->skillRequirement;
+				Log1("\n Found skillRequirement of " + to_string(weapoProp));
+				break;
+			}
+
+
+			else propPos = input.find("strRequired");
+			if (propPos != input.npos) {
+				weapoProp = weap->strRequired;
+				Log1("\n Found strRequired of " + to_string(weapoProp));
+				break;
+			}
+
+			else propPos = input.find("sightUsage");
+			if (propPos != input.npos) {
+				weapoProp = weap->sightUsage;
+				Log1("\n Found sightUsage of " + to_string(weapoProp));
+				break;
+			}
+
+			else propPos = input.find("soundLevel");
+			if (propPos != input.npos) {
+				weapoProp = weap->soundLevel;
+				Log1("\n Found soundLevel of " + to_string(weapoProp));
+				break;
+			}
+			else break;
+		case 'v':
+			propPos = input.find("value");
+			if (propPos != input.npos) {
+				weapoProp = weap->value.value;
+				Log1("\n Found value of " + to_string(weapoProp));
+			}
+			break;
+		case 'w':
+			propPos = input.find("weight");
+			if (propPos != input.npos) {
+				weapoProp = weap->weight.weight;
+				Log1("\n Found weight of " + to_string(weapoProp));
+				break;
+			}
+
+			else propPos = input.find("weaponSkill");
+			if (propPos != input.npos) {
+				weapoProp = weap->weaponSkill;
+				Log1("\n Found weaponSkill of " + to_string(weapoProp));
+			}
+		}
+
+		if (weapoProp != -999 || resultStr != "") {
+			//Log1("\n Found a weapon input of " + to_string(weapoProp));
+			float propVal;
+			string operAndNum = input.substr(propPos);
+			Log1("\n Found a input operand with a number: " + operAndNum);
+			int eqPos = operAndNum.find("=");
+			int notEqPos = operAndNum.find("!");
+			int morePos = operAndNum.find(">");
+			int lessPos = operAndNum.find("<");
+			if (eqPos != operAndNum.npos) {
+
+				string num = operAndNum.substr(eqPos + 1);
+				if (resultStr != "") {
+					Log1("\n Found a input name with =: " + num);
+					if (resultStr.find(":") != resultStr.npos) result = (notEqPos == operAndNum.npos) ? (resultStr.find(":" + num + ":") != resultStr.npos) : (resultStr.find(":" + num + ":") == resultStr.npos);
+					else result = (notEqPos == operAndNum.npos) ? (resultStr.find(num) != resultStr.npos) : (resultStr.find(num) == resultStr.npos);
 				}
 				else {
-					result = (weapoProp >= propVal);
+					Log1("\n Found a input number with =: " + num + " with a " + ((lessPos == operAndNum.npos) ? ">" : "<"));
+					propVal = stoi(num);
+					Log1("\n Found a value: " + to_string(propVal));
+					if (lessPos == operAndNum.npos && morePos == operAndNum.npos) {
+						result = (notEqPos == operAndNum.npos) ? propVal == weapoProp : propVal != weapoProp;
+					}
+					else if (lessPos != operAndNum.npos) {
+						result = (weapoProp <= propVal);
+					}
+					else {
+						result = (weapoProp >= propVal);
+					}
 				}
-			}
-			
-		}
-		else if (lessPos != operAndNum.npos && resultStr == "") {
-			string num = operAndNum.substr(lessPos + 1);
-			Log1("\n Found a property number with <: " + num);
-			propVal = stoi(num);
-			
-			result = weapoProp < propVal;
 
+			}
+			else if (lessPos != operAndNum.npos && resultStr == "") {
+				string num = operAndNum.substr(lessPos + 1);
+				Log1("\n Found a input number with <: " + num);
+				propVal = stoi(num);
+
+				result = weapoProp < propVal;
+
+			}
+			else {
+				string num = operAndNum.substr(morePos + 1);
+				Log1("\n Found a input number with >: " + num);
+				propVal = stoi(num);
+
+				result = weapoProp > propVal;
+			}
 		}
-		else { 
-			string num = operAndNum.substr(morePos + 1);
-			Log1("\n Found a property number with >: " + num);
-			propVal = stoi(num);
-			
-			result = weapoProp > propVal;
-		}
+		Log1("\n Result is: " + to_string(result));
+		return result;
+	};
+	//// Lambda end
+
+	int orPos = input.find("||");
+	if (orPos != input.npos) {
+		Log1("\n Found a divider: || in " + input);
+		return (processOrProp(weap, input.substr(0, orPos)) || processOrProp(weap, input.substr(orPos + 2)));
 	}
-	Log1("\n Result is: " + to_string(result));
+	else return processAProp(weap, input);
+}
+
+bool getWeaponProp(TESObjectWEAP* weap, string property) {
+
+	string propCheck = property;
+	int divPos = propCheck.find("&&");
+	bool result = processOrProp(weap, propCheck.substr(0, divPos));
+	while (divPos != propCheck.npos) {
+		propCheck = propCheck.substr(divPos + 2);
+		Log1("\n Found a divider: && " + propCheck);
+		divPos = propCheck.find("&&");
+		string subProp = propCheck.substr(0, divPos);
+		result = ( result && processOrProp(weap, subProp) );
+	}
+
 	return result;
 }
 
