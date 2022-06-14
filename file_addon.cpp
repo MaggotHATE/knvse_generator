@@ -802,19 +802,22 @@ weaponsBank processTypesMod2(typesBank& definedType, string modID)
 						if (definedType.weapProps[modID].find(matchFolders[0]) == definedType.weapProps[modID].end() || getWeaponProp(weap, definedType.weapProps[modID][matchFolders[0]]) == true) weaponData.typeFolder = matchFolders[0];
 					}
 					if (matchFolders.size() > 1) {
+						Log1("\n Multiple folders; ");
 						srand(time(NULL));
 						for (auto folder : matchFolders){
+							Log1("Checking a folder: " + folder + " with a propety: " + definedType.weapProps[modID][folder] + " for " + weaponData.hexedID);
 							if (definedType.weapProps[modID].find(folder) == definedType.weapProps[modID].end() || getWeaponProp(weap, definedType.weapProps[modID][folder]) == true) {
-
+								Log1("Property Found: " + definedType.weapProps[modID][folder] + " for " + folder + ": weap " + weaponData.hexedID);
 								if (definedType.weapCondi[modID].find(folder) != definedType.weapCondi[modID].end()) {
 									weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(folder);
 									weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(definedType.weapCondi[modID][folder]);
 
 									Log1("Condition Found: " + definedType.weapCondi[modID][folder] + " for " + folder);
 								}
-								else if (rand() % 100 < 50) {
-									weaponData.typeFolder = folder;
-								}
+								else if (weaponData.typeFolder != "") {
+									Log1("Replacement Found for " + weaponData.typeFolder);
+									if (rand() % 100 < 50) weaponData.typeFolder = folder;
+								} else weaponData.typeFolder = folder;
 							}
 						}
 					}
