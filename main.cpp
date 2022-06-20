@@ -227,7 +227,7 @@ bool Cmd_knvse_generateone_Execute(COMMAND_ARGS)
 		auto* weap = actor->GetWeaponForm();
 
 		weaponType weaparams = getWeaponData1(weap);
-		nlohmann::json result = writeAweapon(prefix, weap, reversed, folder);
+		nlohmann::json result = writeAweapon2(prefix, weap, reversed, folder);
 
 		Console_Print(FormatString("Writing in: %s .json", prefix + weaparams.fileModName + folder).c_str());
 

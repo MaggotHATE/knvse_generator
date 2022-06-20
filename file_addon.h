@@ -650,6 +650,7 @@ weaponType getWeaponData1(TESObjectWEAP* weap);
 vector<string> matchAWeapon(TESObjectWEAP* weap);
 vector<string> matchAWeapon1(weaponType& weaps, vector<int> params = {});
 nlohmann::json writeAweapon(string prefix, TESObjectWEAP* weap, int reversed = 0, string folder = "_");
+nlohmann::json writeAweapon2(string prefix, TESObjectWEAP* weap, int reversed = 0, string folder = "_");
 bool writeType(folderMap _map);
 bool writeType(vector<folderMap> _maps, string filename);
 int writeTypesFolders(string namePart);

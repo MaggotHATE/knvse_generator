@@ -131,6 +131,8 @@ TESObjectWEAP* Actor::GetWeaponForm() const
 }
 
 typesBank readTypes(vector<int> params, string typesfilename, string weapsfilename) {
+	if (typesfilename != "_" && typesfilename.find(".json") == typesfilename.npos) typesfilename += ".json";
+	if (weapsfilename != "_"  && weapsfilename.find(".json") == weapsfilename.npos) weapsfilename += ".json";
 	auto hasIt = [](string input, string check) {
 		int posIt = input.find(check);
 		if (posIt != input.npos) return posIt; else return -1;
@@ -819,6 +821,11 @@ weaponsBank processTypesMod2(typesBank& definedType, string modID)
 									if (rand() % 100 < 50) weaponData.typeFolder = folder;
 								} else weaponData.typeFolder = folder;
 							}
+							else if (weaponData.typeFolder != "") {
+								Log1("Replacement Found for " + weaponData.typeFolder);
+								if (rand() % 100 < 50) weaponData.typeFolder = folder;
+							}
+							else weaponData.typeFolder = folder;
 						}
 					}
 					
@@ -1300,9 +1307,14 @@ json writeAweapon(string prefix, TESObjectWEAP* weap, int reversed, string folde
 	vector<int> params;
 	typesBank typesDB = readTypes(params);
 	weaponType weaps = getWeaponData1(weap);
-	if (folder != "_") weaps.typeFolder = folder;
+	vector<string> matchFolders = weaps.checkFolders3(typesDB);
+	if (folder != "_") {
+		for (auto aFolder : matchFolders) {
+			Log1("\n Checking " + aFolder + " vs " + folder);
+			if (aFolder == folder) weaps.typeFolder = folder;
+		}
+	}
 	else {
-		vector<string> matchFolders = weaps.checkFolders3(typesDB);
 		if (matchFolders.size() == 1) {
 			weaps.typeFolder = matchFolders[0];
 		}
@@ -1310,6 +1322,41 @@ json writeAweapon(string prefix, TESObjectWEAP* weap, int reversed, string folde
 			srand(time(NULL));
 			weaps.typeFolder = matchFolders[rand() % matchFolders.size()];
 		}
+	}
+	if (weaps.typeFolder == "") {
+		Console_Print(FormatString("No matching folders found, first set: %s ", matchFolders[0]).c_str());
+		weaps.typeFolder = matchFolders[0];
+	}
+	return pushOrWrite(prefix, weaps, true, reversed);
+}
+
+json writeAweapon2(string prefix, TESObjectWEAP* weap, int reversed, string folder) {
+	weaponType weaps = getWeaponData1(weap);
+	map<string, map<string, vector<int>>> scanFull = DEEPscan(weaps.typeParams);
+	vector<string> matchFolders;
+	for (auto aFolder : scanFull) {
+		if (aFolder.second["matched"][0] != 0 && aFolder.second["matched"][1] != 0 && aFolder.second["matched"][3] != 0 && aFolder.second["matched"][4] != 0) {
+			matchFolders.push_back(aFolder.first);
+		}
+	}
+	if (folder != "_") {
+		for (auto aFolder : matchFolders) {
+			Log1("\n Checking " + aFolder + " vs " + folder);
+			if (aFolder == folder) weaps.typeFolder = folder;
+		}
+	}
+	else {
+		if (matchFolders.size() == 1) {
+			weaps.typeFolder = matchFolders[0];
+		}
+		else if (matchFolders.size() > 1) {
+			srand(time(NULL));
+			weaps.typeFolder = matchFolders[rand() % matchFolders.size()];
+		}
+	}
+	if (weaps.typeFolder == "") {
+		Console_Print(FormatString("No matching folders found, first set: %s ", matchFolders[0]).c_str());
+		weaps.typeFolder = matchFolders[0];
 	}
 	return pushOrWrite(prefix, weaps, true, reversed);
 }
