@@ -331,6 +331,7 @@ struct subMap {
 
 struct weaponsBank {
 	map<int, map<string, string>> formAndFolder; // mod ID, <weapon hexed, folder>
+	map<int, map<string, vector<string>>> folderAndForm; // mod ID, <weapon hexed, folder>
 	map<int, map<string, vector<string>>> formAndFoldersWCondi; // mod id, <weapon hexed, <folder, condition>>
 
 	map<string, string> folderAndCondi; // <folder, condition>
@@ -370,6 +371,25 @@ struct typesBank {
 			return false;
 		}
 		return false;
+	}
+	
+	string getCondiElement(string modID, string folder) {
+		try {
+			if (!weapCondi.at(modID).empty()) {
+				try {
+					if (!weapCondi.at(modID).at(folder).empty()) {
+						return weapCondi.at(modID).at(folder);
+					}
+					else return "";
+				}
+				catch (const out_of_range& oor) {
+					return "";
+				}
+			}
+		}
+		catch (const out_of_range& oor) {
+			return "";
+		}
 	}
 };
 
@@ -444,12 +464,20 @@ struct weaponType {
 		vector<string>& weaptype = (!definedTypes.weapType[fileModName].empty()) ? definedTypes.weapType[fileModName] : definedTypes.weapType["FF"];
 
 		for ( auto type : weaptype) {
-			Log1(" Checking type " + type);
+			//Log1(" Checking type " + type);
 			for (int i = 0; i < definedTypes.typesMap1.size(); i++) {
 				if (definedTypes.typesMap1[i] == type && isThisType(definedTypes.typesMap2[i])) {
 						matching.push_back(type);
 				}
 			}
+		}
+		if (matching.size() > 0) {
+			Log1("\n Weapon data for " + name + "(" + hexedID + ")" + " : mod ID " + FormatString(R"(%X)", modIDX) + " = " + fileModName);
+
+			Log1(" Animation type: " + to_string(typeParams[0]));
+			Log1(" Grip type: " + to_string(typeParams[1]));
+			Log1(" Reload animation: " + to_string(typeParams[2]));
+			Log1(" Attack animation: " + to_string(typeParams[3]) + " \n");
 		}
 
 		return matching;
