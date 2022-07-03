@@ -1,8 +1,6 @@
-## Welcome to GitHub Pages
+## kNVSE Json Generator
 
-You can use the [editor on GitHub](https://github.com/MaggotHATE/knvse_generator/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
-
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+A console-only tool that allows you to create .json files for kNVSE (and get some relevant info) based on weapon parameters. Requires kNVSE sources
 
 ### Markdown
 
