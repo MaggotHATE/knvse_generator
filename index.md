@@ -2,29 +2,32 @@
 
 A console-only tool that allows you to create .json files for kNVSE (and get some relevant info) based on weapon parameters. Requires kNVSE sources
 
-### Markdown
+### Main page
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+[Nexusmods page of the mod](https://www.nexusmods.com/newvegas/mods/75569)
 
 ```markdown
-Syntax highlighted code block
+`Functions:`
 
-# Header 1
-## Header 2
-### Header 3
+# Generation
+- knvse_generate
+- knvse_generateone
+- knvse_generatetypes
+- knvse_generatelist
+- 
+## Scanning
+- knvse_scan
+- knvse_deepscan
+- knvse_getfolders
+### Automation
+- knvse_auto
 
-- Bulleted
-- List
+## TODO
+1. **UI elemets**
+2. Better _visual_ representation of console outputs
 
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+ and ![Image](https://media.discordapp.net/attachments/466980499013894150/949658723624816740/generatecommand.png)
 ```
-
-For more details see [Basic writing and formatting syntax](https://docs.github.com/en/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax).
 
 ### Jekyll Themes
 
