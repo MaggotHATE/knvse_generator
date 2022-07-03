@@ -25,9 +25,8 @@ A console-only tool that allows you to create .json files for kNVSE (and get som
 ## TODO
 1. **UI elemets**
 2. Better _visual_ representation of console outputs
-
- and ![Image](https://media.discordapp.net/attachments/466980499013894150/949658723624816740/generatecommand.png)
 ```
+![Image](https://media.discordapp.net/attachments/466980499013894150/949658723624816740/generatecommand.png)
 
 ### Jekyll Themes
 
