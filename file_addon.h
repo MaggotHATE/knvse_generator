@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <thread>
 #include <future>
+#include<tuple>
 //#include <chrono>
 
 
@@ -13,8 +14,6 @@ using namespace std;
 
 void Log1(const string& msg);
 string GetCurPath();
-
-
 
 struct aniMap {
 	vector<string> Type = {
@@ -327,18 +326,6 @@ struct subMap {
 	string Sgrips;
 };
 
-
-
-struct weaponsBank {
-	map<int, map<string, string>> formAndFolder; // mod ID, <weapon hexed, folder>
-	map<int, map<string, vector<string>>> folderAndForm; // mod ID, <weapon hexed, folder>
-	map<int, map<string, vector<string>>> formAndFoldersWCondi; // mod id, <weapon hexed, <folder, condition>>
-
-	map<string, string> folderAndCondi; // <folder, condition>
-
-	map<string, vector<int>> unassigned;
-};
-
 struct typesBank {
 	map <string, vector<string>> weapType;
 	map <string, map<string, string>> weapCondi; // mod ID, <Folder name, Condition>
@@ -349,13 +336,275 @@ struct typesBank {
 	vector<string> typesMap3;
 	vector<string> excluded;
 	vector<string> options;
-		
+
+	bool processOrProp(TESObjectWEAP* weap, string input) {
+
+		auto processAProp = [](TESObjectWEAP* weap, string input) {
+			bool result = false;
+			const char* str = input.c_str();
+			hash<string> strH;
+			float weapoProp = -999;
+			int propPos;
+			string resultStr = "";
+			//string prop;
+			//map<const char*, float> operVal;
+			//operVal, prop = getStringNumAndOper(input);
+			Log1("\n Result starts: " + to_string(result));
+			//const char* str = prop.c_str();
+			switch (*str) {
+			case 'a':
+				propPos = input.find("attackDmg");
+				if (propPos != input.npos) {
+					weapoProp = weap->attackDmg.GetDamage();
+					Log1(" Found attackDmg of " + to_string(weapoProp));
+					break;
+				}
+
+				else propPos = input.find("ammo");
+				if (propPos != input.npos) {
+					resultStr = weap->ammo.ammo->GetName();
+					Log1(" Found ammo of " + resultStr);
+					break;
+				}
+
+				else propPos = input.find("ammoUse");
+				if (propPos != input.npos) {
+					weapoProp = weap->ammoUse;
+					Log1(" Found ammoUse of " + to_string(weapoProp));
+					break;
+				}
+
+				else propPos = input.find("animShotsPerSec");
+				if (propPos != input.npos) {
+					weapoProp = weap->animShotsPerSec;
+					Log1(" Found animShotsPerSec of " + to_string(weapoProp));
+					break;
+				}
+
+				else propPos = input.find("animReloadTime");
+				if (propPos != input.npos) {
+					weapoProp = weap->animReloadTime;
+					Log1(" Found animReloadTime of " + to_string(weapoProp));
+					break;
+				}
+				else break;
+
+			case 'c':
+				propPos = input.find("clipRounds");
+				if (propPos != input.npos) {
+					weapoProp = weap->clipRounds.clipRounds;
+					Log1(" Found clipRounds of " + to_string(weapoProp));
+				}
+				break;
+			case 'f':
+				propPos = input.find("fireRate");
+				if (propPos != input.npos) {
+					weapoProp = weap->fireRate;
+					Log1(" Found fireRate of " + to_string(weapoProp));
+				}
+				break;
+			case 'h':
+				propPos = input.find("health");
+				if (propPos != input.npos) {
+					weapoProp = weap->health.health;
+					Log1(" Found health of " + to_string(weapoProp));
+					break;
+				}
+			case 'H':
+				propPos = input.find("HasScope");
+				if (propPos != input.npos) {
+					weapoProp = weap->HasScope();
+					Log1(" Found HasScope of " + to_string(weapoProp));
+					break;
+				}
+				else propPos = input.find("HasItemModEffect");
+				if (propPos != input.npos) {
+					for (int i = 1; i < 3; i++) resultStr += ":" + to_string(weap->GetItemModEffect(i)) + ":";
+					Log1(" Found HasItemModEffect of " + resultStr);
+					break;
+				}
+				else break;
+			case 'I':
+				propPos = input.find("IsNonPlayable");
+				if (propPos != input.npos) {
+					weapoProp = weap->IsNonPlayable();
+					Log1(" Found IsNonPlayable of " + to_string(weapoProp));
+				}
+				break;
+			case 'n':
+				propPos = input.find("numProjectiles");
+				if (propPos != input.npos) {
+					weapoProp = weap->numProjectiles;
+					Log1(" Found numProjectiles of " + to_string(weapoProp));
+				}
+				break;
+			case 's':
+				propPos = input.find("skillRequirement");
+				if (propPos != input.npos) {
+					weapoProp = weap->skillRequirement;
+					Log1(" Found skillRequirement of " + to_string(weapoProp));
+					break;
+				}
+
+
+				else propPos = input.find("strRequired");
+				if (propPos != input.npos) {
+					weapoProp = weap->strRequired;
+					Log1(" Found strRequired of " + to_string(weapoProp));
+					break;
+				}
+
+				else propPos = input.find("sightUsage");
+				if (propPos != input.npos) {
+					weapoProp = weap->sightUsage;
+					Log1(" Found sightUsage of " + to_string(weapoProp));
+					break;
+				}
+
+				else propPos = input.find("soundLevel");
+				if (propPos != input.npos) {
+					weapoProp = weap->soundLevel;
+					Log1(" Found soundLevel of " + to_string(weapoProp));
+					break;
+				}
+				else break;
+			case 'v':
+				propPos = input.find("value");
+				if (propPos != input.npos) {
+					weapoProp = weap->value.value;
+					Log1(" Found value of " + to_string(weapoProp));
+				}
+				break;
+			case 'w':
+				propPos = input.find("weight");
+				if (propPos != input.npos) {
+					weapoProp = weap->weight.weight;
+					Log1(" Found weight of " + to_string(weapoProp));
+					break;
+				}
+
+				else propPos = input.find("weaponSkill");
+				if (propPos != input.npos) {
+					weapoProp = weap->weaponSkill;
+					Log1(" Found weaponSkill of " + to_string(weapoProp));
+				}
+			}
+
+			if (weapoProp != -999 || resultStr != "") {
+				//Log1("\n Found a weapon input of " + to_string(weapoProp));
+				float propVal;
+				string operAndNum = input.substr(propPos);
+				Log1(" Found a input operand with a number: " + operAndNum);
+				int eqPos = operAndNum.find("=");
+				int notEqPos = operAndNum.find("!");
+				int morePos = operAndNum.find(">");
+				int lessPos = operAndNum.find("<");
+				if (eqPos != operAndNum.npos) {
+
+					string num = operAndNum.substr(eqPos + 1);
+					if (resultStr != "") {
+						Log1(" Found a input name with =: " + num);
+						if (resultStr.find(":") != resultStr.npos) result = (notEqPos == operAndNum.npos) ? (resultStr.find(":" + num + ":") != resultStr.npos) : (resultStr.find(":" + num + ":") == resultStr.npos);
+						else result = (notEqPos == operAndNum.npos) ? (resultStr.find(num) != resultStr.npos) : (resultStr.find(num) == resultStr.npos);
+					}
+					else {
+						Log1(" Found a input number with =: " + num + " with a " + ((lessPos == operAndNum.npos) ? ">" : "<"));
+						propVal = stoi(num);
+						Log1(" Found a value: " + to_string(propVal));
+						if (lessPos == operAndNum.npos && morePos == operAndNum.npos) {
+							result = (notEqPos == operAndNum.npos) ? propVal == weapoProp : propVal != weapoProp;
+						}
+						else if (lessPos != operAndNum.npos) {
+							result = (weapoProp <= propVal);
+						}
+						else {
+							result = (weapoProp >= propVal);
+						}
+					}
+
+				}
+				else if (lessPos != operAndNum.npos && resultStr == "") {
+					string num = operAndNum.substr(lessPos + 1);
+					Log1(" Found a input number with <: " + num);
+					propVal = stoi(num);
+
+					result = weapoProp < propVal;
+
+				}
+				else {
+					string num = operAndNum.substr(morePos + 1);
+					Log1(" Found a input number with >: " + num);
+					propVal = stoi(num);
+
+					result = weapoProp > propVal;
+				}
+			}
+			Log1(" Result is: " + to_string(result) + " \n");
+			return result;
+		};
+		//// Lambda end
+
+		int orPos = input.find("||");
+		if (orPos != input.npos) {
+			Log1("\n Found a divider: || in " + input);
+			return (processOrProp(weap, input.substr(0, orPos)) || processOrProp(weap, input.substr(orPos + 2)));
+		}
+		else return processAProp(weap, input);
+	}
+
+	bool getWeaponProp(TESObjectWEAP* weap, string property) {
+
+		string propCheck = property;
+		int divPos = propCheck.find("&&");
+		bool result = processOrProp(weap, propCheck.substr(0, divPos));
+		while (divPos != propCheck.npos) {
+			propCheck = propCheck.substr(divPos + 2);
+			Log1("\n Found a divider: && " + propCheck);
+			divPos = propCheck.find("&&");
+			string subProp = propCheck.substr(0, divPos);
+			result = (result && processOrProp(weap, subProp));
+		}
+
+		return result;
+	}
+
+	bool hasProperty(string modID, TESObjectWEAP* weap, string matchFolder) {
+		bool tmp = weapProps[modID].find(matchFolder) != weapProps[modID].end();
+		if (tmp == false) return weapProps["FF"].find(matchFolder) != weapProps["FF"].end();
+		else return tmp;
+	}
+
+	bool hasTrueProperty(string modID, TESObjectWEAP* weap, string matchFolder) {
+		bool preTmp = hasProperty(modID, weap, matchFolder);
+
+		if (preTmp == true) {
+			bool tmp = preTmp && getWeaponProp(weap, weapProps[modID][matchFolder]) == true;
+			if (tmp == false) return preTmp && getWeaponProp(weap, weapProps["FF"][matchFolder]) == true;
+			else return tmp;
+		}
+		else return false;
+	}
+
+
+	vector<bool> hasCondition(string modID, string matchFolder) {
+		Log1(" Checking first time " + matchFolder);
+		bool firstCondiCheck = getCondiElement(modID, matchFolder) != "";
+		bool hasLocal = true;
+		Log1(" : condition " + to_string(firstCondiCheck));
+		//if (hasProrerty == false ) bool hasProrerty = definedType.weapProps["FF"].find(matchFolder) == definedType.weapProps["FF"].end() || getWeaponProp(weap, definedType.weapProps["FF"][matchFolder]) == true;
+		if (firstCondiCheck == false) {
+			firstCondiCheck = getCondiElement("FF", matchFolder) != "";
+			hasLocal = false;
+			Log1(" Checking Second time (" + to_string(weapCondi["FF"].size()) + ") " + matchFolder + " : condition " + to_string(firstCondiCheck));
+		}
+		return { firstCondiCheck, hasLocal };
+	}
 
 	bool folderInMod(string fileModName, string type) {
 		if (!weapType[fileModName].empty()) {
 			return (find(weapType[fileModName].begin(), weapType[fileModName].end(), type) != weapType[fileModName].end());
 		}
-		else if(!weapType["FF"].empty()) {
+		else if (!weapType["FF"].empty()) {
 			return (find(weapType["FF"].begin(), weapType["FF"].end(), type) != weapType["FF"].end());
 		}
 		else Log1(" No defines for " + fileModName);
@@ -372,12 +621,15 @@ struct typesBank {
 		}
 		return false;
 	}
-	
+
 	string getCondiElement(string modID, string folder) {
+		//Log1(" Trying getCondiElement for " + modID + " and " + folder);
 		try {
 			if (!weapCondi.at(modID).empty()) {
+				//Log1(" Some conditions for mod " + modID);
 				try {
 					if (!weapCondi.at(modID).at(folder).empty()) {
+						//Log1(" Some conditions for folder " + folder);
 						return weapCondi.at(modID).at(folder);
 					}
 					else return "";
@@ -390,6 +642,33 @@ struct typesBank {
 		catch (const out_of_range& oor) {
 			return "";
 		}
+		return "";
+	}
+};
+
+struct weaponsBank {
+	map<int, map<string, string>> formAndFolder; // mod ID, <weapon hexed, folder>
+	map<int, map<string, vector<string>>> folderAndForm; // mod ID, <weapon hexed, folder>
+	map<int, map<string, vector<string>>> formAndFoldersWCondi; // mod id, <weapon hexed, <folder, condition>>
+
+	map<string, string> folderAndCondi; // <folder, condition>
+
+	map<string, vector<int>> unassigned;
+
+	bool pushCondi(typesBank& definedType, int IDX, string hexedID, string modID, string folder) {
+		if (hexedID != "" && folder != "" && IDX >= 0) {
+			formAndFoldersWCondi[IDX][hexedID].push_back(definedType.weapCondi[modID][folder]);
+			return true;
+		}
+		else return false;
+	}
+
+	bool pushFolderAndForm(int IDX, string folder, string hexedID) {
+		if (hexedID != "" && folder != "" && IDX >= 0) {
+			folderAndForm[IDX][folder].push_back(hexedID);
+			return true;
+		}
+		else return false;
 	}
 };
 

@@ -545,237 +545,6 @@ weaponType getWeaponData1(TESObjectWEAP* weap) {
 	//};
 ///
 
-bool processOrProp(TESObjectWEAP* weap, string input) {
-
-	auto processAProp = [](TESObjectWEAP* weap, string input) {
-		bool result = false;
-		const char* str = input.c_str();
-		hash<string> strH;
-		float weapoProp = -999;
-		int propPos;
-		string resultStr = "";
-		//string prop;
-		//map<const char*, float> operVal;
-		//operVal, prop = getStringNumAndOper(input);
-		Log1("\n Result starts: " + to_string(result));
-		//const char* str = prop.c_str();
-		switch (*str) {
-		case 'a':
-			propPos = input.find("attackDmg");
-			if (propPos != input.npos) {
-				weapoProp = weap->attackDmg.GetDamage();
-				Log1(" Found attackDmg of " + to_string(weapoProp));
-				break;
-			}
-
-			else propPos = input.find("ammo");
-			if (propPos != input.npos) {
-				resultStr = weap->ammo.ammo->GetName();
-				Log1(" Found ammo of " + resultStr);
-				break;
-			}
-
-			else propPos = input.find("ammoUse");
-			if (propPos != input.npos) {
-				weapoProp = weap->ammoUse;
-				Log1(" Found ammoUse of " + to_string(weapoProp));
-				break;
-			}
-
-			else propPos = input.find("animShotsPerSec");
-			if (propPos != input.npos) {
-				weapoProp = weap->animShotsPerSec;
-				Log1(" Found animShotsPerSec of " + to_string(weapoProp));
-				break;
-			}
-
-			else propPos = input.find("animReloadTime");
-			if (propPos != input.npos) {
-				weapoProp = weap->animReloadTime;
-				Log1(" Found animReloadTime of " + to_string(weapoProp));
-				break;
-			}
-			else break;
-
-		case 'c':
-			propPos = input.find("clipRounds");
-			if (propPos != input.npos) {
-				weapoProp = weap->clipRounds.clipRounds;
-				Log1(" Found clipRounds of " + to_string(weapoProp));
-			}
-			break;
-		case 'f':
-			propPos = input.find("fireRate");
-			if (propPos != input.npos) {
-				weapoProp = weap->fireRate;
-				Log1(" Found fireRate of " + to_string(weapoProp));
-			}
-			break;
-		case 'h':
-			propPos = input.find("health");
-			if (propPos != input.npos) {
-				weapoProp = weap->health.health;
-				Log1(" Found health of " + to_string(weapoProp));
-				break;
-			}
-		case 'H':
-			propPos = input.find("HasScope");
-			if (propPos != input.npos) {
-				weapoProp = weap->HasScope();
-				Log1(" Found HasScope of " + to_string(weapoProp));
-				break;
-			}
-			else propPos = input.find("HasItemModEffect");
-			if (propPos != input.npos) {
-				for (int i = 1; i < 3; i++) resultStr += ":" + to_string(weap->GetItemModEffect(i)) + ":";
-				Log1(" Found HasItemModEffect of " + resultStr);
-				break;
-			}
-			else break;
-		case 'I':
-			propPos = input.find("IsNonPlayable");
-			if (propPos != input.npos) {
-				weapoProp = weap->IsNonPlayable();
-				Log1(" Found IsNonPlayable of " + to_string(weapoProp));
-			}
-			break;
-		case 'n':
-			propPos = input.find("numProjectiles");
-			if (propPos != input.npos) {
-				weapoProp = weap->numProjectiles;
-				Log1(" Found numProjectiles of " + to_string(weapoProp));
-			}
-			break;
-		case 's':
-			propPos = input.find("skillRequirement");
-			if (propPos != input.npos) {
-				weapoProp = weap->skillRequirement;
-				Log1(" Found skillRequirement of " + to_string(weapoProp));
-				break;
-			}
-
-
-			else propPos = input.find("strRequired");
-			if (propPos != input.npos) {
-				weapoProp = weap->strRequired;
-				Log1(" Found strRequired of " + to_string(weapoProp));
-				break;
-			}
-
-			else propPos = input.find("sightUsage");
-			if (propPos != input.npos) {
-				weapoProp = weap->sightUsage;
-				Log1(" Found sightUsage of " + to_string(weapoProp));
-				break;
-			}
-
-			else propPos = input.find("soundLevel");
-			if (propPos != input.npos) {
-				weapoProp = weap->soundLevel;
-				Log1(" Found soundLevel of " + to_string(weapoProp));
-				break;
-			}
-			else break;
-		case 'v':
-			propPos = input.find("value");
-			if (propPos != input.npos) {
-				weapoProp = weap->value.value;
-				Log1(" Found value of " + to_string(weapoProp));
-			}
-			break;
-		case 'w':
-			propPos = input.find("weight");
-			if (propPos != input.npos) {
-				weapoProp = weap->weight.weight;
-				Log1(" Found weight of " + to_string(weapoProp));
-				break;
-			}
-
-			else propPos = input.find("weaponSkill");
-			if (propPos != input.npos) {
-				weapoProp = weap->weaponSkill;
-				Log1(" Found weaponSkill of " + to_string(weapoProp));
-			}
-		}
-
-		if (weapoProp != -999 || resultStr != "") {
-			//Log1("\n Found a weapon input of " + to_string(weapoProp));
-			float propVal;
-			string operAndNum = input.substr(propPos);
-			Log1(" Found a input operand with a number: " + operAndNum);
-			int eqPos = operAndNum.find("=");
-			int notEqPos = operAndNum.find("!");
-			int morePos = operAndNum.find(">");
-			int lessPos = operAndNum.find("<");
-			if (eqPos != operAndNum.npos) {
-
-				string num = operAndNum.substr(eqPos + 1);
-				if (resultStr != "") {
-					Log1(" Found a input name with =: " + num);
-					if (resultStr.find(":") != resultStr.npos) result = (notEqPos == operAndNum.npos) ? (resultStr.find(":" + num + ":") != resultStr.npos) : (resultStr.find(":" + num + ":") == resultStr.npos);
-					else result = (notEqPos == operAndNum.npos) ? (resultStr.find(num) != resultStr.npos) : (resultStr.find(num) == resultStr.npos);
-				}
-				else {
-					Log1(" Found a input number with =: " + num + " with a " + ((lessPos == operAndNum.npos) ? ">" : "<"));
-					propVal = stoi(num);
-					Log1(" Found a value: " + to_string(propVal));
-					if (lessPos == operAndNum.npos && morePos == operAndNum.npos) {
-						result = (notEqPos == operAndNum.npos) ? propVal == weapoProp : propVal != weapoProp;
-					}
-					else if (lessPos != operAndNum.npos) {
-						result = (weapoProp <= propVal);
-					}
-					else {
-						result = (weapoProp >= propVal);
-					}
-				}
-
-			}
-			else if (lessPos != operAndNum.npos && resultStr == "") {
-				string num = operAndNum.substr(lessPos + 1);
-				Log1(" Found a input number with <: " + num);
-				propVal = stoi(num);
-
-				result = weapoProp < propVal;
-
-			}
-			else {
-				string num = operAndNum.substr(morePos + 1);
-				Log1(" Found a input number with >: " + num);
-				propVal = stoi(num);
-
-				result = weapoProp > propVal;
-			}
-		}
-		Log1(" Result is: " + to_string(result) + " \n");
-		return result;
-	};
-	//// Lambda end
-
-	int orPos = input.find("||");
-	if (orPos != input.npos) {
-		Log1("\n Found a divider: || in " + input);
-		return (processOrProp(weap, input.substr(0, orPos)) || processOrProp(weap, input.substr(orPos + 2)));
-	}
-	else return processAProp(weap, input);
-}
-
-bool getWeaponProp(TESObjectWEAP* weap, string property) {
-
-	string propCheck = property;
-	int divPos = propCheck.find("&&");
-	bool result = processOrProp(weap, propCheck.substr(0, divPos));
-	while (divPos != propCheck.npos) {
-		propCheck = propCheck.substr(divPos + 2);
-		Log1("\n Found a divider: && " + propCheck);
-		divPos = propCheck.find("&&");
-		string subProp = propCheck.substr(0, divPos);
-		result = ( result && processOrProp(weap, subProp) );
-	}
-
-	return result;
-}
-
 weaponsBank processTypesMod2(typesBank& definedType, string modID)
 {
 	weaponsBank weapBank;
@@ -786,21 +555,21 @@ weaponsBank processTypesMod2(typesBank& definedType, string modID)
 
 	for (auto mIter = formsMap->Begin(); mIter; ++mIter) { // credits to Yvileapsis for the iteration example
 
-		auto checkAfolder = [](typesBank definedType, string modID, TESObjectWEAP* weap, string matchFolder) {
-			bool hasProrerty = definedType.weapProps[modID].find(matchFolder) == definedType.weapProps[modID].end() || getWeaponProp(weap, definedType.weapProps[modID][matchFolder]) == true;
-			//bool hasCondition = definedType.weapCondi[modID].find(matchFolder) != definedType.weapCondi[modID].end();
-			bool hasCondition = definedType.getCondiElement(modID, matchFolder) != "";
-			bool hasLocal = true;
-			Log1(" Checking first time " + matchFolder + " : property " + to_string(hasProrerty) + "; condition " + to_string(hasCondition));
-			//if (hasProrerty == false ) bool hasProrerty = definedType.weapProps["FF"].find(matchFolder) == definedType.weapProps["FF"].end() || getWeaponProp(weap, definedType.weapProps["FF"][matchFolder]) == true;
-			if (hasCondition == false) {
-				hasCondition = definedType.getCondiElement("FF", matchFolder) != "";
-				hasLocal = false;
-				Log1(" Checking Second time ("+ to_string( definedType.weapCondi["FF"].size() ) + ") " + matchFolder + " : property " + to_string(hasProrerty) + "; condition " + to_string(hasCondition));
-			}
+		//auto checkAfolder = [](typesBank definedType, string modID, TESObjectWEAP* weap, string matchFolder) {
+		//	bool hasProperty = definedType.weapProps[modID].find(matchFolder) == definedType.weapProps[modID].end() || definedType.getWeaponProp(weap, definedType.weapProps[modID][matchFolder]) == true;
+		//	//bool hasCondition = definedType.weapCondi[modID].find(matchFolder) != definedType.weapCondi[modID].end();
+		//	bool hasCondition = definedType.getCondiElement(modID, matchFolder) != "";
+		//	bool hasLocal = true;
+		//	Log1(" Checking first time " + matchFolder + " : property " + to_string(hasProperty) + "; condition " + to_string(hasCondition));
+		//	//if (hasProrerty == false ) bool hasProrerty = definedType.weapProps["FF"].find(matchFolder) == definedType.weapProps["FF"].end() || getWeaponProp(weap, definedType.weapProps["FF"][matchFolder]) == true;
+		//	if (hasCondition == false) {
+		//		hasCondition = definedType.getCondiElement("FF", matchFolder) != "";
+		//		hasLocal = false;
+		//		Log1(" Checking Second time ("+ to_string( definedType.weapCondi["FF"].size() ) + ") " + matchFolder + " : property " + to_string(hasProperty) + "; condition " + to_string(hasCondition));
+		//	}
 
-			return vector { hasProrerty, hasCondition, hasLocal };
-		};
+		//	return vector { hasProperty, hasCondition, hasLocal };
+		//};
 
 		TESForm* form = mIter.Get();
 		if (form->IsWeapon()) {
@@ -814,41 +583,110 @@ weaponsBank processTypesMod2(typesBank& definedType, string modID)
 					vector<string> matchFolders;
 					//Log1("Checking all files; ");
 					matchFolders = weaponData.checkFolders2(definedType);
+					vector<string> simpleFolders;
+					vector<string> condiGlobalFolders;
+					vector<string> condiLocalFolders;
+					vector<string> propFolders;
 					for (int i = 0; i < matchFolders.size(); i++) {
-						int randN = rand() % 100;
-						srand(randN);
-						Log1("\nScanning matched folder: " + matchFolders[i] + " with " + to_string(randN));
-						auto folderChecks = checkAfolder(definedType, modID, weap, matchFolders[i]);
-						if (folderChecks[0] == true) {
-							if (folderChecks[1] == true) {
-								weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(matchFolders[i]);
-								if (folderChecks[2] == true) weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(definedType.weapCondi[modID][matchFolders[i]]);
-								else weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(definedType.weapCondi["FF"][matchFolders[i]]);
+						auto hasProperty = definedType.hasProperty(modID, weap, matchFolders[i]);
+						Log1("\nThe folder " + matchFolders[i] + " hasProperty " + to_string(hasProperty));
+						auto hasTrueProperty = definedType.hasTrueProperty(modID, weap, matchFolders[i]);
+						Log1("\nThe folder " + matchFolders[i] + " hasTrueProperty " + to_string(hasTrueProperty));
+						//bool hasCondition;
+						//bool localCondition;
+						//vector<bool> condiData;
+						vector<bool> condiData = definedType.hasCondition(modID, matchFolders[i]);
 
-								Log1(" Condition Found: " + definedType.weapCondi[modID][matchFolders[i]] + " for " + matchFolders[i]);
-							}
-							else if (weaponData.typeFolder != "") {
-								Log1(" Replacement with property found: from " + weaponData.typeFolder + " to " + matchFolders[i]);
-								if (randN > 50) weaponData.typeFolder = matchFolders[i];
-							}
-							else weaponData.typeFolder = matchFolders[i];
+						//{hasCondition, localCondition} = definedType.hasCondition(modID, matchFolders[i]);
+
+						Log1("\nThe folder " + matchFolders[i] + " hasCondition " + to_string(condiData[0]) + " and hasLocalCondition " + to_string(condiData[1]));
+						if (hasTrueProperty == true && condiData[0] == false) {
+							propFolders.push_back(matchFolders[i]);
+							Log1("\nPushed " + matchFolders[i] + " into propFolders"); 
 						}
-						else if (folderChecks[1] == false && weaponData.typeFolder != "") {
-							Log1(" Replacement found for " + weaponData.typeFolder);
-							if (randN > 50) weaponData.typeFolder = matchFolders[i];
+
+						if (condiData[0] == true && (hasProperty == hasTrueProperty)) {
+							if (condiData[1] == true) {
+								condiLocalFolders.push_back(matchFolders[i]);
+								Log1("\nPushed " + matchFolders[i] + " into condiLocalFolders");
+							} else {
+								condiGlobalFolders.push_back(matchFolders[i]);
+								Log1("\nPushed " + matchFolders[i] + " into condiGlobalFolders");
+							}
+						}
+
+						if (hasProperty == false && hasTrueProperty == false && condiData[0] == false) {
+							simpleFolders.push_back(matchFolders[i]);
+							Log1("\nPushed " + matchFolders[i] + " into simpleFolders");
 						}
 					}
-					
-					if (weaponData.typeFolder != "") {
+
+					for (auto folder : condiLocalFolders) {
+						weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(folder);
+						weapBank.pushCondi(definedType, currentIDX, weaponData.hexedID, modID, folder);
+						Log1(" Condition Local Found: " + definedType.weapCondi[modID][folder] + " for " + folder);
+					}
+
+					for (auto folder : condiGlobalFolders) {
+						weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(folder);
+						weapBank.pushCondi(definedType, currentIDX, weaponData.hexedID, "FF", folder);
+						Log1(" Condition Global Found: " + definedType.weapCondi["FF"][folder] + " for " + folder);
+					}
+
+					int randN = rand() % 100;
+					srand(randN);
+
+					if (!propFolders.empty()) { 
+						randN = rand() % propFolders.size();
+						srand(randN);
+						weaponData.typeFolder = propFolders[randN];
+						Log1("\nTook a propFolder " + weaponData.typeFolder + " from " + to_string(propFolders.size()));
+					}
+					else if (!simpleFolders.empty()) {
+						randN = rand() % simpleFolders.size();
+						srand(randN);
+						weaponData.typeFolder = simpleFolders[randN];
+						Log1("\nTook a simpleFolder " + weaponData.typeFolder + " from " + to_string(propFolders.size()));
+					}
+
+					//for (int i = 0; i < matchFolders.size(); i++) {
+					//	int randN = rand() % 100;
+					//	srand(randN);
+					//	Log1("\nScanning matched folder: " + matchFolders[i] + " with " + to_string(randN));
+					//	auto folderChecks = checkAfolder(definedType, modID, weap, matchFolders[i]);
+					//	if (folderChecks[0] == true) {
+					//		if (folderChecks[1] == true) {
+					//			weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(matchFolders[i]);
+					//			if (folderChecks[2] == true) weapBank.pushCondi(definedType, currentIDX, weaponData.hexedID, modID, matchFolders[i]);//weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(definedType.weapCondi[modID][matchFolders[i]]);
+					//			else weapBank.pushCondi(definedType, currentIDX, weaponData.hexedID, "FF", matchFolders[i]);//weapBank.formAndFoldersWCondi[currentIDX][weaponData.hexedID].push_back(definedType.weapCondi["FF"][matchFolders[i]]);
+
+					//			Log1(" Condition Found: " + definedType.weapCondi[modID][matchFolders[i]] + " for " + matchFolders[i]);
+					//		}
+					//		else if (weaponData.typeFolder != "") {
+					//			Log1(" Replacement with property found: from " + weaponData.typeFolder + " to " + matchFolders[i]);
+					//			if (randN > 50) weaponData.typeFolder = matchFolders[i];
+					//		}
+					//		else weaponData.typeFolder = matchFolders[i];
+					//	}
+//						else if (folderChecks[1] == false && weaponData.typeFolder != "") {
+//							Log1(" Replacement found for " + weaponData.typeFolder);
+//							if (randN > 50) weaponData.typeFolder = matchFolders[i];
+//						}
+//					}
+
+					if (weaponData.typeFolder != "") Log1(" Replacement successfull with folder " + weaponData.typeFolder + " for " + weaponData.name + "; refID " + weaponData.hexedID + "; mod ID " + FormatString(R"(%X)", weaponData.modIDXshort) + ": " + to_string(weapBank.pushFolderAndForm(currentIDX, weaponData.typeFolder, weaponData.hexedID)) );
+					/*if (weaponData.typeFolder != "") {
 						Log1(weaponData.log1);
 						Log1(" Replacing animations with " + weaponData.typeFolder + " for " + weaponData.name + "; refID " + weaponData.hexedID + "; mod ID " + FormatString(R"(%X)", weaponData.modIDXshort));
 						weapBank.formAndFolder[currentIDX][weaponData.hexedID] = weaponData.typeFolder;
-						weapBank.folderAndForm[currentIDX][weaponData.typeFolder].push_back(weaponData.hexedID);
+						//weapBank.folderAndForm[currentIDX][weaponData.typeFolder].push_back(weaponData.hexedID);
+						Log1(" Replacement successfull: " + weapBank.pushFolderAndForm(currentIDX, weaponData.typeFolder, weaponData.hexedID));
 						//Log1("Looking for conditions in " + modID);
 					}
 					else {
 						weapBank.unassigned[weaponData.hexedID] = weaponData.typeParams;
 					}
+					*/
 				}
 			}
 		}
@@ -1110,7 +948,7 @@ map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData) {
 	aniMap themap;
 	map<string, map<string, vector<int>>> _maps;
 	int numTypes = 0;
-	std::vector<std::thread> threads;
+	//std::vector<std::thread> threads;
 	const auto then = chrono::system_clock::now();
 
 	auto scanAFolder = [](aniMap themap, string SfileName, vector<int>& weaponData, map<string, map<string, vector<int>>>& _maps) {
@@ -1136,12 +974,13 @@ map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData) {
 			{
 				//Log1("Checking " + SfileName);
 
-				threads.push_back( thread(scanAFolder,themap, SfileName, ref(weaponData), ref(_maps)) );
+				//threads.push_back( thread(scanAFolder,themap, SfileName, ref(weaponData), ref(_maps)) );
+				scanAFolder(themap, SfileName, ref(weaponData), ref(_maps));
 				
 			}
 		}
 	}
-	for (auto& th : threads) th.join();
+	//for (auto& th : threads) th.join();
 
 	const auto now = chrono::system_clock::now();
 	const auto diff = chrono::duration_cast<chrono::milliseconds>(now - then);
