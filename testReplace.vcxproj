@@ -134,6 +134,8 @@
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <ForcedIncludeFiles>nvse/prefix.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>
@@ -202,7 +204,8 @@
     </Link>
     <PostBuildEvent>
       <Message>Installing DLL...</Message>
-      <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Fallout New Vegas enplczru\Data\NVSE\plugins\$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Fallout New Vegas enplczru\Data\NVSE\plugins\$(TargetFileName)"
+copy "$(TargetPath)" "T:\Fallout New Vegas\Data\NVSE\plugins\$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release GECK|Win32'">

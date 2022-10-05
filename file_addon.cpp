@@ -222,7 +222,7 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 									if (modChecked == "") {
 										//ranges::transform(*types, back_inserter(typesDB.weapType["GLOBAL"]), [&](auto& i) {return i.template get<string>(); });
 										//Log1("reading applied types for GLOBAL: " + typesDB.weapType["GLOBAL"].back());
-										modChecked = "FF";
+										modChecked = "FF" ;
 									}
 									//else {
 									string logloc = "Reading inside for " + modChecked + ": \n";
@@ -232,7 +232,7 @@ typesBank readTypes(vector<int> params, string typesfilename, string weapsfilena
 										int propPos = findString(iString, "+properties");
 
 										if (condiPos == 999 && propPos == 999) {
-											logloc += ("\n Pure folder name: "+ iString);
+											logloc += ("\n Pure folder name: " + iString);
 											return iString;
 										}
 										else {
@@ -947,8 +947,8 @@ int writeTypesFolders(string namePart) {
 map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData) {
 	aniMap themap;
 	map<string, map<string, vector<int>>> _maps;
-	int numTypes = 0;
-	//std::vector<std::thread> threads;
+	//int numTypes = 0;
+	std::vector<std::thread> threads;
 	const auto then = chrono::system_clock::now();
 
 	auto scanAFolder = [](aniMap themap, string SfileName, vector<int>& weaponData, map<string, map<string, vector<int>>>& _maps) {
@@ -958,7 +958,11 @@ map<string, map<string, vector<int>>> DEEPscan(vector<int> weaponData) {
 		_maps[SfileName] = scanResult.getWeaponScan(weaponData);
 	};
 
+	//c++ is cursed
+	//int a = (numTypes == 0) ? 1 : 0;
+	//int b = 0;
 
+	//(a == 1 ? a : b) = numTypes;
 
 	const auto dir = GetCurPath() + R"(\Data\Meshes\AnimGroupOverride)";
 	if (filesystem::exists(dir))

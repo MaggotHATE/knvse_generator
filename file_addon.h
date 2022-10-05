@@ -79,12 +79,23 @@ struct aniMap {
 		{"placemine2" , 108}
 	};
 
+	string cleanName(string name) {
+		string cleanedName = name;
+		int reloadPos = name.find("reload");
+		int attkPos = name.find("attack");
+		if (name.find("_partial") == name.npos)	(reloadPos != name.npos ? cleanedName = name.substr(0,7) : (attkPos != name.npos ? cleanedName = name.substr(0,7) : cleanedName = name));
+
+		return cleanedName;
+	};
+
 	string scanFiles (const string SfileName0, map<string, map<string, int>>& result) {
 		string SfileName;
 		transform(SfileName0.begin(), SfileName0.end(), std::back_inserter(SfileName), ::tolower);
 		auto last = SfileName.length() - 6;
 		string subname = SfileName.substr(3, last);
 		string subname1 = subname.substr(0, last-2);
+		//subname = cleanName(subname);
+		//subname1 = cleanName(subname1);
 
 		string loclog = "\n scanFiles "+ SfileName0 + ": " + subname + " or " + subname1 +" \n";
 		//Log1(" Valid file !");
@@ -104,8 +115,9 @@ struct aniMap {
 						aAttk = Attk1.at(subname);
 						result[Type[i] + to_string(aType)][subname] = aAttk;
 
-						//loclog += "Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
+						loclog += "Found attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
 					}
+					
 				}
 				catch (const out_of_range& oor) {
 					if (aAttk == -1)	try
@@ -116,12 +128,21 @@ struct aniMap {
 							aAttk = Attk1.at(subname1);
 							result[Type[i] + to_string(aType)][subname1] = aAttk;
 
-							//loclog += "Found additional attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
+							loclog += "Found additional attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
 						}
+						
 					}
 					catch (const out_of_range& oor) {
 						//Log1("This weapontype wasn't defined: " + weapType[i]);
 						//result[Type[i]]["noattacks"]= -2;
+						for (auto attack : Attk1) {
+							if (subname.find(attack.first) != subname.npos) {
+								aAttk = attack.second;
+								result[Type[i] + to_string(aType)][attack.first] = aAttk;
+
+								loclog += "Found renamed attack anim " + SfileName + " for " + to_string(aType) + " -1 -1 " + to_string(aAttk) + " \n";
+							}
+						}
 					}
 
 					//Log1("This weapontype wasn't defined: " + weapType[i]);
@@ -133,7 +154,7 @@ struct aniMap {
 					result[Type[i] + to_string(aType)][Reload[0]] = -1;
 					result[Type[i] + to_string(aType)][subname1] = 255;
 
-					loclog += "Melees don't reload and use 255 for attack, skipping: " + SfileName + " for " + to_string(aType) + " -1 -1 255 \n";
+					loclog += "Melees don't reload and use 255 for attack, skipping: " + SfileName + " for " + to_string(aType) + " -1 " + " -1 255 \n";
 				} else if (aAttk == -1) {
 					int aReload = -1;
 					{
@@ -146,7 +167,7 @@ struct aniMap {
 								result[Type[i] + to_string(aType)]["Grip"] = -1;
 								result[Type[i] + to_string(aType)][Reload[j]] = aReload;
 
-								//loclog += "Found reload anim " + SfileName + " for " + to_string(aType) + " -1 " + to_string(aReload) + " -1 \n";
+								loclog += "Found reload anim " + SfileName + " for " + to_string(aType) + " -1 " + to_string(aReload) + " -1 \n";
 							}
 						}
 					}
